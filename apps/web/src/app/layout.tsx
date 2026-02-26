@@ -7,6 +7,7 @@ import { cacheLife, cacheTag } from "next/cache";
 // Fonts
 import { Inter } from "next/font/google";
 import { IBM_Plex_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 
 import NotificationProvider from "@/components/client/features/notice/NotificationProvider";
 import { LayoutContainer } from "@/components/client/layout/LayoutContainer";
@@ -208,6 +209,7 @@ export default async function RootLayout({
             dangerouslySetInnerHTML={{ __html: customScript }}
           />
         )}
+        <Analytics />
       </body>
     </html>
   );
