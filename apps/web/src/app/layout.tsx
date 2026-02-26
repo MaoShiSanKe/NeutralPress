@@ -20,6 +20,7 @@ import { ThemeProvider } from "@/components/client/layout/ThemeProvider";
 import { AnalyticsTracker } from "@/components/client/logic/AnalyticsTracker";
 import { RecentVisitTracker } from "@/components/client/logic/RecentVisitTracker";
 import TokenManager from "@/components/client/logic/TokenManager";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import Footer from "@/components/server/layout/Footer";
 // Server Componments
 import Header from "@/components/server/layout/Header";
@@ -208,6 +209,7 @@ export default async function RootLayout({
             dangerouslySetInnerHTML={{ __html: customScript }}
           />
         )}
+        <SpeedInsights />
       </body>
     </html>
   );
