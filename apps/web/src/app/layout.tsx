@@ -4,6 +4,7 @@ import "server-only";
 import { Suspense } from "react";
 import type { Viewport } from "next";
 import { cacheLife, cacheTag } from "next/cache";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 // Fonts
 import { Inter } from "next/font/google";
 import { IBM_Plex_Mono } from "next/font/google";
@@ -208,6 +209,7 @@ export default async function RootLayout({
             dangerouslySetInnerHTML={{ __html: customScript }}
           />
         )}
+        <SpeedInsights />
       </body>
     </html>
   );
