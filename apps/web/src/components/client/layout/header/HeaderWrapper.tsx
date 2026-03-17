@@ -1,16 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 import Avatar from "@/../public/avatar.jpg";
+import { LoginButton as UserInfo } from "@/components/client/layout/user/UserInfo";
 import { useConfig } from "@/context/ConfigContext";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
 import { useConsoleStore } from "@/store/console-store";
 import { useMenuStore } from "@/store/menu-store";
+import { AutoTransition } from "@/ui/AutoTransition";
 
 // Type
 interface TransitionMessage {
@@ -219,6 +221,7 @@ export default function HeaderWrapper({
   const isMobile = useMobile();
   const headerHeight = isMobile ? "6em" : "5em";
   const headerOffsetY = isMobile ? 112 : 80;
+  const shouldShowMobileUserInfo = isMobile && isMenuOpen;
 
   // 监听广播消息
   useBroadcast((message: TransitionMessage) => {
@@ -330,6 +333,21 @@ export default function HeaderWrapper({
     };
   }, []);
 
+  const renderHeaderAvatar = () => (
+    <div
+      key="site-avatar"
+      className="flex items-center justify-center w-full h-full"
+    >
+      <Image
+        src={avatarSrc}
+        width={100}
+        height={100}
+        alt="Logo"
+        className="h-full w-auto"
+      />
+    </div>
+  );
+
   return (
     <>
       <motion.header
@@ -353,14 +371,30 @@ export default function HeaderWrapper({
           restSpeed: 0.01,
         }}
       >
-        <div className="flex items-center" style={{ width: headerHeight }}>
-          <Image
-            src={avatarSrc}
-            width={100}
-            height={100}
-            alt="Logo"
-            className="h-full w-auto"
-          />
+        <div
+          className="flex items-center justify-center border-r border-border"
+          style={{ width: headerHeight }}
+        >
+          <div className="h-full aspect-square">
+            <AutoTransition
+              type="scale"
+              duration={0.25}
+              className="w-full h-full"
+            >
+              {shouldShowMobileUserInfo ? (
+                <div
+                  key="mobile-user-info"
+                  className="flex items-center justify-center w-full h-full"
+                >
+                  <Suspense fallback={renderHeaderAvatar()}>
+                    <UserInfo />
+                  </Suspense>
+                </div>
+              ) : (
+                renderHeaderAvatar()
+              )}
+            </AutoTransition>
+          </div>
         </div>
         <div className="flex-1 flex items-center justify-center relative h-full">
           <TitleTransition
