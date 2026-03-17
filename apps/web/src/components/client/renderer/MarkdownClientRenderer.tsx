@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
+import type { Components } from "react-markdown";
 import Markdown from "react-markdown";
 
 import { createMarkdownComponents } from "@/lib/shared/mdx-config";
@@ -14,6 +15,7 @@ interface MarkdownRendererProps {
   source: string;
   className?: string;
   shikiTheme?: ShikiTheme;
+  components?: Components;
 }
 
 /**
@@ -23,9 +25,12 @@ export default function MarkdownClientRenderer({
   source,
   className = "max-w-4xl mx-auto md-content",
   shikiTheme,
+  components,
 }: MarkdownRendererProps) {
-  // ✅ 传递 shikiTheme 给 createMarkdownComponents
-  const markdownComponents = createMarkdownComponents(shikiTheme);
+  const markdownComponents = useMemo(
+    () => components ?? createMarkdownComponents(shikiTheme),
+    [components, shikiTheme],
+  );
 
   return (
     <div className={className}>

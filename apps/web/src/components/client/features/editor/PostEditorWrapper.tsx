@@ -13,6 +13,7 @@ import { TagInput } from "@/components/client/features/tags/TagInput";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import {
   clearEditorContent,
+  flushEditorContentSave,
   loadEditorContent,
   saveEditorContent,
 } from "@/lib/client/editor-persistence";
@@ -222,6 +223,8 @@ export function PostEditorWrapper({
 
     setIsSubmitting(true);
     try {
+      flushEditorContentSave(storageKey);
+
       // 保存配置到 localStorage
       const editorData = loadEditorContent(storageKey);
       if (editorData) {
@@ -252,6 +255,8 @@ export function PostEditorWrapper({
 
     setIsSubmitting(true);
     try {
+      flushEditorContentSave(storageKey);
+
       // 创建新标签
       const newTags = formData.tags.filter((tag) => tag.isNew);
       if (newTags.length > 0) {
@@ -273,16 +278,6 @@ export function PostEditorWrapper({
       }
 
       // 获取当前编辑器内容
-      let currentContent = "";
-      if (typeof window !== "undefined") {
-        try {
-          const savedData = loadEditorContent(storageKey);
-          currentContent = savedData?.content || "";
-        } catch (error) {
-          console.error("Failed to get editor content:", error);
-        }
-      }
-
       // 确定编辑器模式
       const editorData = loadEditorContent(storageKey);
       const editorType = editorData?.config?.editorType || "visual";
@@ -300,7 +295,7 @@ export function PostEditorWrapper({
           slug: storageKey,
           title: formData.title,
           newSlug: formData.slug !== storageKey ? formData.slug : undefined,
-          content: currentContent,
+          content: loadEditorContent(storageKey)?.content || "",
           status: formData.status,
           categories: formData.category ? [formData.category] : undefined,
           tags: tagNames.length > 0 ? tagNames : undefined,
@@ -322,7 +317,7 @@ export function PostEditorWrapper({
         const createData = {
           title: formData.title,
           slug: formData.slug,
-          content: currentContent,
+          content: loadEditorContent(storageKey)?.content || "",
           status: confirmAction === "publish" ? "PUBLISHED" : "DRAFT",
           categories: formData.category ? [formData.category] : undefined,
           tags: tagNames.length > 0 ? tagNames : undefined,

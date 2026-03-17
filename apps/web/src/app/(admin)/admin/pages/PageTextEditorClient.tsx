@@ -8,6 +8,7 @@ import { EditorCore } from "@/components/client/features/editor/EditorCore";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import {
   clearEditorContent,
+  flushEditorContentSave,
   loadEditorContent,
 } from "@/lib/client/editor-persistence";
 import runWithAuth from "@/lib/client/run-with-auth";
@@ -58,15 +59,15 @@ export default function PageTextEditorClient({
   const navigate = useNavigateWithTransition();
   const toast = useToast();
   const [isSaving, setIsSaving] = useState(false);
-  const [currentContent, setCurrentContent] = useState(page.content);
   const storageKey = `page-editor:${page.id}`;
   const modeConfig = editorModeConfig[page.contentType];
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const draft = loadEditorContent(storageKey);
-      const contentToSave = draft?.content ?? currentContent;
+      flushEditorContentSave(storageKey);
+      const contentToSave =
+        loadEditorContent(storageKey)?.content ?? page.content;
 
       const result = await runWithAuth(updatePage, {
         slug: page.slug,
@@ -75,7 +76,6 @@ export default function PageTextEditorClient({
 
       if (result && "data" in result && result.data) {
         clearEditorContent(storageKey);
-        setCurrentContent(contentToSave);
         toast.success(`页面「${page.title}」已保存`);
         router.refresh();
       } else {
@@ -108,12 +108,11 @@ export default function PageTextEditorClient({
   return (
     <div className="h-full">
       <EditorCore
-        content={currentContent}
+        content={page.content}
         storageKey={storageKey}
         availableModes={modeConfig.availableModes}
         defaultMode={modeConfig.defaultMode}
         statusBarActions={statusBarActions}
-        onChange={setCurrentContent}
       />
     </div>
   );

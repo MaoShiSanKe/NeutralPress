@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, useEffect, useRef, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState } from "react";
 import { RiAlertLine, RiRefreshLine } from "@remixicon/react";
 import { hydrate } from "next-mdx-remote-client/csr";
 import type { SerializeResult } from "next-mdx-remote-client/serialize";
@@ -11,6 +11,7 @@ import { useConfig } from "@/context/ConfigContext";
 import {
   cleanMDXSource,
   createEnhancedMDXComponents,
+  createMarkdownComponents,
   mdxSerializeOptions,
 } from "@/lib/shared/mdx-config";
 import type { ConfigType } from "@/types/config";
@@ -137,6 +138,14 @@ export function LivePreview({
   const [renderError, setRenderError] = useState<Error | null>(null);
   const [retryKey, setRetryKey] = useState(0); // 用于触发重试
   const containerRef = useRef<HTMLDivElement>(null);
+  const markdownComponents = useMemo(
+    () => createMarkdownComponents(shikiTheme),
+    [shikiTheme],
+  );
+  const mdxComponents = useMemo(
+    () => createEnhancedMDXComponents(withErrorBoundary, shikiTheme),
+    [shikiTheme],
+  );
 
   // 重置错误状态
   const handleResetError = () => {
@@ -200,7 +209,11 @@ export function LivePreview({
     // Markdown 模式: 使用 MarkdownRenderer 渲染，传递 shikiTheme
     renderedContent = (
       <MDXErrorBoundary onReset={handleResetError}>
-        <MarkdownClientRenderer source={content} shikiTheme={shikiTheme} />
+        <MarkdownClientRenderer
+          source={content}
+          shikiTheme={shikiTheme}
+          components={markdownComponents}
+        />
       </MDXErrorBoundary>
     );
   } else if (mode === "html") {
@@ -221,15 +234,9 @@ export function LivePreview({
         );
       } else {
         try {
-          // 使用增强的组件配置（带 ErrorBoundary），传入 Shiki 主题
-          const components = createEnhancedMDXComponents(
-            withErrorBoundary,
-            shikiTheme,
-          );
-
           const { content: hydratedContent, error: hydrateError } = hydrate({
             ...mdxSource,
-            components,
+            components: mdxComponents,
           });
 
           if (hydrateError) {

@@ -71,6 +71,7 @@ export function MonacoEditor({
   const latestLanguageRef = useRef(language);
   const latestThemeRef = useRef<"vs-light" | "vs-dark">("vs-light");
   const focusTimerRef = useRef<number | null>(null);
+  const isApplyingExternalValueRef = useRef(false);
   const modelPathRef = useRef(
     `inmemory://neutralpress/editor-${Math.random().toString(36).slice(2)}.md`,
   );
@@ -154,6 +155,9 @@ export function MonacoEditor({
         monaco.editor.setTheme(latestThemeRef.current);
 
         contentDisposable = instance.onDidChangeModelContent(() => {
+          if (isApplyingExternalValueRef.current) {
+            return;
+          }
           onChangeRef.current(instance.getValue());
         });
 
@@ -216,9 +220,16 @@ export function MonacoEditor({
     if (currentValue === value) return;
 
     const currentPosition = instance.getPosition();
-    instance.setValue(value);
-    if (currentPosition) {
-      instance.setPosition(currentPosition);
+    isApplyingExternalValueRef.current = true;
+    try {
+      instance.setValue(value);
+      if (currentPosition) {
+        instance.setPosition(currentPosition);
+      }
+    } finally {
+      queueMicrotask(() => {
+        isApplyingExternalValueRef.current = false;
+      });
     }
   }, [value]);
 

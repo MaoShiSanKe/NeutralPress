@@ -196,12 +196,6 @@ export class AdapterManager {
     command: K,
     params: CommandWithParams[K],
   ): void {
-    console.log("AdapterManager: executeCommandWithParams", {
-      command,
-      params,
-      hasAdapter: !!this.currentAdapter,
-      adapterType: this.currentType,
-    });
     this.currentAdapter?.executeCommandWithParams(command, params);
   }
 
