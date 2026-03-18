@@ -38,6 +38,7 @@ import {
   useReauth,
 } from "@/app/(account)/settings/use-reauth";
 import UnauthorizedPage from "@/app/unauthorized";
+import { useMobile } from "@/hooks/use-mobile";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
@@ -92,6 +93,7 @@ export default function SettingsClient({
   const [showUnlinkDialog, setShowUnlinkDialog] = useState(false);
   const [revokeSessionId, setRevokeSessionId] = useState<string | null>(null);
   const [showRevokeSessionDialog, setShowRevokeSessionDialog] = useState(false);
+  const isMobile = useMobile();
 
   // Reauth Hook
   const {
@@ -121,6 +123,11 @@ export default function SettingsClient({
     ],
     [],
   );
+
+  const handleSectionChange = useCallback((sectionId: string) => {
+    setActiveSection(sectionId);
+    window.history.replaceState(null, "", `/settings#${sectionId}`);
+  }, []);
 
   // 从 URL hash 读取当前分类
   useEffect(() => {
@@ -300,10 +307,10 @@ export default function SettingsClient({
 
   return (
     <div className="bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         {/* 头部 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground tracking-wider">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl font-bold text-foreground tracking-wider sm:text-3xl">
             账户设置
           </h1>
           <p className="mt-2 text-muted-foreground">
@@ -312,40 +319,66 @@ export default function SettingsClient({
         </div>
 
         {/* 左右两栏布局 */}
-        <div className="flex gap-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
           {/* 左侧导航栏 */}
-          <aside className="w-64 flex-shrink-0">
-            <nav className="sticky top-8 space-y-1">
-              {sections.map((section) => {
-                const Icon = section.icon;
-                const isActive = activeSection === section.id;
-                return (
-                  <button
-                    key={section.id}
-                    onClick={() => {
-                      setActiveSection(section.id);
-                      window.history.replaceState(
-                        null,
-                        "",
-                        `/settings#${section.id}`,
-                      );
-                    }}
-                    className={`
-                      w-full flex items-center gap-3 px-4 py-2.5 rounded-sm
-                      text-left transition-all duration-200
-                      ${
-                        isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-foreground hover:bg-foreground/5"
-                      }
-                    `}
-                  >
-                    <Icon size="1.25em" />
-                    <span>{section.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
+          <aside className="w-full lg:w-64 lg:flex-shrink-0">
+            {isMobile ? (
+              <nav className="w-full h-[4em] overflow-x-auto overflow-y-hidden mb-3">
+                <div className="flex items-center h-full gap-2 min-w-max">
+                  {sections.map((section) => {
+                    const Icon = section.icon;
+                    const isActive = activeSection === section.id;
+                    return (
+                      <button
+                        key={section.id}
+                        type="button"
+                        onClick={() => handleSectionChange(section.id)}
+                        aria-current={isActive ? "page" : undefined}
+                        className={`flex items-center gap-2 px-3 py-2 shrink-0 transition-all duration-200 ${
+                          isActive
+                            ? "bg-primary text-primary-foreground shadow-md"
+                            : "bg-muted/50 hover:bg-muted"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center">
+                          <Icon size="1.25em" />
+                        </div>
+                        <span className="text-sm font-medium whitespace-nowrap">
+                          {section.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
+            ) : (
+              <nav className="lg:sticky lg:top-8 lg:block lg:space-y-1">
+                {sections.map((section) => {
+                  const Icon = section.icon;
+                  const isActive = activeSection === section.id;
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => handleSectionChange(section.id)}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`
+                        flex w-full items-center gap-3 whitespace-nowrap rounded-sm px-4 py-2.5
+                        text-left transition-all duration-200
+                        ${
+                          isActive
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "text-foreground hover:bg-foreground/5"
+                        }
+                      `}
+                    >
+                      <Icon size="1.25em" />
+                      <span>{section.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
           </aside>
 
           {/* 右侧内容区 */}

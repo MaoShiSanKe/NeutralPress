@@ -78,23 +78,26 @@ export function SessionSection({ onRevokeSession }: SessionSectionProps) {
       </div>
 
       <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10 flex items-center justify-between">
-          <div>
-            <p className="text-foreground font-medium">管理活跃的会话</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              查看所有登录设备并撤销可疑会话
-            </p>
+        <div className="px-4 py-4 border-b border-foreground/10 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-foreground font-medium">管理活跃的会话</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                查看所有登录设备并撤销可疑会话
+              </p>
+            </div>
+            <Button
+              label="刷新"
+              onClick={loadSessions}
+              variant="ghost"
+              size="sm"
+              loading={sessionsLoading}
+              disabled={sessionsLoading}
+              className="flex-shrink-0"
+            />
           </div>
-          <Button
-            label="刷新"
-            onClick={loadSessions}
-            variant="ghost"
-            size="sm"
-            loading={sessionsLoading}
-            disabled={sessionsLoading}
-          />
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <AutoResizer duration={0.3}>
             <div>
               <AutoTransition type="fade" duration={0.2} initial={false}>
@@ -120,7 +123,7 @@ export function SessionSection({ onRevokeSession }: SessionSectionProps) {
                       <div
                         key={session.id}
                         className={`
-                          flex items-center justify-between py-4 gap-4 pr-5
+                          flex items-center justify-between gap-4 py-4 sm:pr-5
                           ${index !== sessions.length - 1 ? "border-b border-foreground/10" : ""}
                           ${session.revokedAt ? "opacity-50" : ""}
                         `}
@@ -131,7 +134,7 @@ export function SessionSection({ onRevokeSession }: SessionSectionProps) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium text-foreground truncate">
+                              <p className="font-medium text-foreground break-words sm:truncate">
                                 {session.displayName}
                               </p>
                               {session.isCurrent && (

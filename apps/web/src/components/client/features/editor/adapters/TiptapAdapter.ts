@@ -304,7 +304,6 @@ export class TiptapAdapter implements IEditorAdapter {
 
       case "insertImage": {
         const { url, alt } = params as { url: string; alt?: string };
-        console.log("TiptapAdapter: Inserting single image", { url, alt });
         this.editor
           .chain()
           .focus()
@@ -318,14 +317,11 @@ export class TiptapAdapter implements IEditorAdapter {
 
       case "insertImages": {
         const { urls, alt } = params as { urls: string[]; alt?: string };
-        console.log("TiptapAdapter: Inserting multiple images", { urls, alt });
         // 构建所有图片节点
         const imageNodes = urls.map((url) => ({
           type: "image",
           attrs: { src: url, alt: alt || "" },
         }));
-
-        console.log("TiptapAdapter: Image nodes", imageNodes);
 
         // 一次性插入所有图片
         this.editor.chain().focus().insertContent(imageNodes).run();

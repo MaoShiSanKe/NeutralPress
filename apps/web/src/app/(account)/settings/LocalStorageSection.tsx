@@ -414,12 +414,12 @@ export function LocalStorageSection() {
       </div>
 
       <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+        <div className="px-4 py-4 border-b border-foreground/10 sm:px-6">
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             全部清理
           </h3>
         </div>
-        <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="p-4 flex items-center justify-between gap-3 sm:p-6">
           <p className="text-sm text-muted-foreground">
             这将清除本地存储中的草稿缓存及部分缓存数据。目前可清理大小：
             {(snapshot.totalSize / 1024 / 1024).toFixed(2)} MB
@@ -429,19 +429,20 @@ export function LocalStorageSection() {
             variant="danger"
             size="sm"
             onClick={() => setPendingDeleteAction({ type: "all" })}
+            className="flex-shrink-0"
           />
         </div>
       </div>
 
       <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+        <div className="px-4 py-4 border-b border-foreground/10 sm:px-6">
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             可删除项目
           </h3>
           <p className="text-sm text-muted-foreground mt-1">按项清理本地缓存</p>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="space-y-4">
             {MANAGED_STORAGE_KEYS.map((key, index) => {
               const hasData = snapshot.keyExists[key];
@@ -450,13 +451,13 @@ export function LocalStorageSection() {
               return (
                 <div
                   key={key}
-                  className={`flex items-center justify-between gap-4 pb-4 pr-5 ${
+                  className={`flex items-center justify-between gap-4 pb-4 sm:pr-5 ${
                     index !== MANAGED_STORAGE_KEYS.length - 1
                       ? "border-b border-foreground/10"
                       : ""
                   }`}
                 >
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-foreground font-medium">
                         {meta.label}
@@ -472,7 +473,7 @@ export function LocalStorageSection() {
 
                   <Clickable
                     onClick={() => setPendingDeleteAction({ type: "key", key })}
-                    className="text-error transition-colors"
+                    className="text-error transition-colors flex-shrink-0"
                     disabled={!hasData}
                   >
                     <RiDeleteBinLine size="1.25em" />
@@ -485,7 +486,7 @@ export function LocalStorageSection() {
       </div>
 
       <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+        <div className="px-4 py-4 border-b border-foreground/10 sm:px-6">
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             文章/项目草稿明细
           </h3>
@@ -494,7 +495,7 @@ export function LocalStorageSection() {
           </p>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {snapshot.editorDrafts.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {snapshot.keyExists.editor
@@ -506,17 +507,17 @@ export function LocalStorageSection() {
               {snapshot.editorDrafts.map((draft, index) => (
                 <div
                   key={draft.draftKey}
-                  className={`py-4 flex items-center justify-between gap-4 pr-5 ${
+                  className={`py-4 flex items-center justify-between gap-4 sm:pr-5 ${
                     index !== snapshot.editorDrafts.length - 1
                       ? "border-b border-foreground/10"
                       : ""
                   }`}
                 >
                   <div className="min-w-0">
-                    <p className="text-foreground font-medium truncate">
+                    <p className="text-foreground font-medium break-words sm:truncate">
                       {draft.title}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-muted-foreground mt-1 break-all">
                       {draft.typeLabel} · key: <code>{draft.draftKey}</code>
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -544,7 +545,7 @@ export function LocalStorageSection() {
       </div>
 
       <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+        <div className="px-4 py-4 border-b border-foreground/10 sm:px-6">
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             页面布局草稿明细
           </h3>
@@ -553,7 +554,7 @@ export function LocalStorageSection() {
           </p>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {snapshot.pageDrafts.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {snapshot.keyExists.page_editor
@@ -565,14 +566,14 @@ export function LocalStorageSection() {
               {snapshot.pageDrafts.map((draft, index) => (
                 <div
                   key={draft.pageId}
-                  className={`py-4 flex items-center justify-between gap-4 pr-5 ${
+                  className={`py-4 flex items-center justify-between gap-4 sm:pr-5 ${
                     index !== snapshot.pageDrafts.length - 1
                       ? "border-b border-foreground/10"
                       : ""
                   }`}
                 >
                   <div className="min-w-0">
-                    <p className="text-foreground font-medium truncate">
+                    <p className="text-foreground font-medium break-all sm:truncate">
                       页面 ID: <code>{draft.pageId}</code>
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">

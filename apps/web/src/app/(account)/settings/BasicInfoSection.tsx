@@ -44,6 +44,12 @@ const formatDate = (dateString: string): string => {
   });
 };
 
+const cardClassName = "bg-background border border-foreground/10 rounded-sm";
+const cardHeaderClassName = "px-4 py-4 border-b border-foreground/10 sm:px-6";
+const cardBodyClassName = "p-4 sm:p-6";
+const cardRowClassName = "flex items-center justify-between gap-3";
+const actionButtonClassName = "flex-shrink-0";
+
 /**
  * 基本信息板块组件
  */
@@ -70,13 +76,13 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
       </div>
 
       {/* 用户 ID */}
-      <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+      <div className={cardClassName}>
+        <div className={cardHeaderClassName}>
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             用户 ID
           </h3>
         </div>
-        <div className="p-6">
+        <div className={cardBodyClassName}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-foreground font-medium font-mono">
@@ -91,14 +97,14 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
       </div>
 
       {/* 昵称 */}
-      <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+      <div className={cardClassName}>
+        <div className={cardHeaderClassName}>
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             昵称
           </h3>
         </div>
-        <div className="p-6">
-          <div className="flex items-center justify-between">
+        <div className={cardBodyClassName}>
+          <div className={cardRowClassName}>
             <div className="flex-1">
               <p className="text-foreground font-medium">
                 {user.nickname || "未设置"}
@@ -112,22 +118,25 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               onClick={() => handleEdit("nickname")}
               variant="secondary"
               size="sm"
+              className={actionButtonClassName}
             />
           </div>
         </div>
       </div>
 
       {/* 用户名 */}
-      <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+      <div className={cardClassName}>
+        <div className={cardHeaderClassName}>
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             用户名
           </h3>
         </div>
-        <div className="p-6">
-          <div className="flex items-center justify-between">
+        <div className={cardBodyClassName}>
+          <div className={cardRowClassName}>
             <div className="flex-1">
-              <p className="text-foreground font-medium">{user.username}</p>
+              <p className="text-foreground font-medium break-all">
+                {user.username}
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
                 用于登录的唯一用户名
               </p>
@@ -137,26 +146,28 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               onClick={() => handleEdit("username")}
               variant="secondary"
               size="sm"
+              className={actionButtonClassName}
             />
           </div>
         </div>
       </div>
 
       {/* 头像 */}
-      <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+      <div className={cardClassName}>
+        <div className={cardHeaderClassName}>
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             头像
           </h3>
         </div>
-        <div className="p-6">
-          <div className="flex items-center gap-4">
+        <div className={cardBodyClassName}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mt-1">
                 我们默认使用使用 Gravatar 来显示你的头像，你可以在{" "}
                 <Link
                   presets={["hover-color", "arrow-out"]}
                   href="https://gravatar.com/"
+                  className="break-all"
                 >
                   https://gravatar.com/
                 </Link>{" "}
@@ -171,23 +182,25 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               email={user.email}
               size={80}
               shape="circle"
-              className="flex-shrink-0"
+              className="flex-shrink-0 self-start"
             />
           </div>
         </div>
       </div>
 
       {/* 用户邮箱 */}
-      <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+      <div className={cardClassName}>
+        <div className={cardHeaderClassName}>
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             用户邮箱
           </h3>
         </div>
-        <div className="p-6">
-          <div className="flex items-center justify-between">
+        <div className={cardBodyClassName}>
+          <div className={cardRowClassName}>
             <div className="flex-1">
-              <p className="text-foreground font-medium">{user.email}</p>
+              <p className="text-foreground font-medium break-all">
+                {user.email}
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
                 用于接收通知和账户恢复
               </p>
@@ -197,20 +210,21 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               onClick={() => handleEdit("email")}
               variant="secondary"
               size="sm"
+              className={actionButtonClassName}
             />
           </div>
         </div>
       </div>
 
       {/* 网站 */}
-      <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+      <div className={cardClassName}>
+        <div className={cardHeaderClassName}>
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             网站
           </h3>
         </div>
-        <div className="p-6">
-          <div className="flex items-center justify-between">
+        <div className={cardBodyClassName}>
+          <div className={cardRowClassName}>
             <div className="flex-1">
               {user.website ? (
                 <>
@@ -218,7 +232,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                     href={user.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-foreground font-medium hover:text-primary transition-colors"
+                    className="text-foreground font-medium hover:text-primary transition-colors break-all"
                   >
                     {user.website}
                   </a>
@@ -240,21 +254,22 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               onClick={() => handleEdit("website")}
               variant="secondary"
               size="sm"
+              className={actionButtonClassName}
             />
           </div>
         </div>
       </div>
 
       {/* 个人简介 */}
-      <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+      <div className={cardClassName}>
+        <div className={cardHeaderClassName}>
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             个人简介
           </h3>
         </div>
-        <div className="p-6">
+        <div className={cardBodyClassName}>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className={cardRowClassName}>
               <p className="text-sm text-muted-foreground">
                 {user.bio ? "你的个人介绍" : "你还没有填写个人简介"}
               </p>
@@ -263,6 +278,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 onClick={() => handleEdit("bio")}
                 variant="secondary"
                 size="sm"
+                className={actionButtonClassName}
               />
             </div>
             {user.bio && (
@@ -275,13 +291,13 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
       </div>
 
       {/* 账户角色 */}
-      <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+      <div className={cardClassName}>
+        <div className={cardHeaderClassName}>
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             账户角色
           </h3>
         </div>
-        <div className="p-6">
+        <div className={cardBodyClassName}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-foreground font-medium">
@@ -296,13 +312,13 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
       </div>
 
       {/* 注册时间 */}
-      <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+      <div className={cardClassName}>
+        <div className={cardHeaderClassName}>
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             注册时间
           </h3>
         </div>
-        <div className="p-6">
+        <div className={cardBodyClassName}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-foreground font-medium">

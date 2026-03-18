@@ -215,14 +215,14 @@ export default function WebPushManager() {
     <>
       <div className="space-y-6">
         {/* 添加订阅按钮 */}
-        <div className="flex items-center justify-between pb-4 border-b border-foreground/10">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-foreground/10 pb-4">
+          <div className="min-w-0 flex-1">
             <p className="text-foreground font-medium">管理 Web Push 订阅</p>
             <p className="text-sm text-muted-foreground mt-1">
               接收浏览器原生推送通知，在未打开站点时也能收到实时通知。
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               onClick={handleSendTest}
               label="发送测试通知"
@@ -267,7 +267,7 @@ export default function WebPushManager() {
                   {items.map((item, index) => (
                     <div
                       key={item.id}
-                      className={`flex items-center justify-between py-4 gap-4 ${index !== items.length - 1 ? "border-b border-foreground/10" : ""}`}
+                      className={`flex items-center justify-between gap-4 py-4 ${index !== items.length - 1 ? "border-b border-foreground/10" : ""}`}
                     >
                       <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
@@ -275,7 +275,7 @@ export default function WebPushManager() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-foreground truncate">
+                            <p className="font-medium text-foreground break-words sm:truncate">
                               {item.deviceName}
                             </p>
                             {!item.isActive && (
@@ -320,7 +320,7 @@ export default function WebPushManager() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-3 flex-shrink-0 pr-5">
+                      <div className="flex gap-3 flex-shrink-0 pr-0 sm:pr-5">
                         <Clickable
                           onClick={() => {
                             setRenameTarget(item.endpoint);

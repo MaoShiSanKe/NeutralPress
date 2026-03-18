@@ -3,7 +3,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 
 export default function BackupsInfo() {
   return (
-    <GridItem areas={[1, 2, 3, 4]} width={3} height={0.8}>
+    <GridItem areas={[1, 2, 3, 4]} width={3} height={0.4}>
       <AutoTransition type="scale" className="h-full">
         <div className="flex h-full flex-col justify-start p-10" key="content">
           <div className="py-2 text-2xl">备份还原</div>

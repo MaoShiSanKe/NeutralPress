@@ -5,12 +5,17 @@ import {
   getPageByIdParam,
   resolveContentTypeEditorPath,
 } from "@/app/(admin)/admin/pages/page-editor";
+import LayoutEditorDesktopNotice from "@/components/client/features/page-editor/LayoutEditorDesktopNotice";
 import AdminSidebar from "@/components/client/layout/AdminSidebar";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
+import { getClientUserAgent } from "@/lib/server/get-client-info";
 import { getSystemPageConfig } from "@/lib/server/page-cache";
 import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";
+
+const MOBILE_UA_RE =
+  /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -44,6 +49,22 @@ export default async function BlockPageEditorPage({ params }: Props) {
 
   if (page.contentType !== "BLOCK") {
     redirect(resolveContentTypeEditorPath(page));
+  }
+
+  const userAgent = await getClientUserAgent();
+  const isMobileRequest = MOBILE_UA_RE.test(userAgent);
+
+  if (isMobileRequest) {
+    return (
+      <MainLayout type="horizontal">
+        <HorizontalScroll className="h-full">
+          <AdminSidebar />
+          <div className="w-full overflow-y-auto">
+            <LayoutEditorDesktopNotice />
+          </div>
+        </HorizontalScroll>
+      </MainLayout>
+    );
   }
 
   const config = getSystemPageConfig(page);

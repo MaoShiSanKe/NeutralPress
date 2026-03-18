@@ -2576,21 +2576,26 @@ async function applyReplaceImport(
   scope: BackupScope,
   data: BackupData,
 ): Promise<BackupApplySummary> {
-  return prisma.$transaction(async (tx) => {
-    if (scope === "CORE_BASE") {
-      return replaceCoreBaseScope(tx, data);
-    }
-    if (scope === "ASSETS") {
-      return replaceAssetsScope(tx, data);
-    }
-    if (scope === "CONTENT") {
-      return replaceContentScope(tx, data);
-    }
-    if (scope === "ANALYTICS") {
-      return replaceAnalyticsScope(tx, data);
-    }
-    return replaceOpsLogsScope(tx, data);
-  });
+  return prisma.$transaction(
+    async (tx) => {
+      if (scope === "CORE_BASE") {
+        return replaceCoreBaseScope(tx, data);
+      }
+      if (scope === "ASSETS") {
+        return replaceAssetsScope(tx, data);
+      }
+      if (scope === "CONTENT") {
+        return replaceContentScope(tx, data);
+      }
+      if (scope === "ANALYTICS") {
+        return replaceAnalyticsScope(tx, data);
+      }
+      return replaceOpsLogsScope(tx, data);
+    },
+    {
+      timeout: 30000,
+    },
+  );
 }
 
 function toDryRunResult(params: {

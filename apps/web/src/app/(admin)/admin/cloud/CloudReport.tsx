@@ -19,6 +19,7 @@ import {
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { formatDateTimeWithSeconds } from "@/lib/shared/date-format";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";
@@ -52,17 +53,6 @@ const VERIFY_SOURCE_LABELS: Record<
   JWKS: "JWKS",
   NONE: "NONE",
 };
-
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
 
 function formatRate(value: number | null | undefined): string {
   if (typeof value !== "number" || !Number.isFinite(value)) return "-";
@@ -162,7 +152,9 @@ function buildSummary(
       `云端状态：${remoteStatus}；事件总数 ${remote.eventsTotal ?? "-"}，成功率 ${formatRate(remote.successRate)}。`,
     );
     if (remote.registeredAt) {
-      lines.push(`注册时间：${formatDateTime(remote.registeredAt)}。`);
+      lines.push(
+        `注册时间：${formatDateTimeWithSeconds(remote.registeredAt)}。`,
+      );
     }
     const localMinuteSlot = utcMinuteToLocalHhMm(remote.minuteOfDay);
     if (localMinuteSlot) {
@@ -179,7 +171,7 @@ function buildSummary(
   } else {
     const latestStatus = getLocalDisplayStatus(latest);
     lines.push(
-      `本地最近投递：${formatDateTime(latest.receivedAt)}，状态 ${LOCAL_STATUS_LABELS[latestStatus]}，验签来源 ${latest.verifySource ? VERIFY_SOURCE_LABELS[latest.verifySource] : "无"}。`,
+      `本地最近投递：${formatDateTimeWithSeconds(latest.receivedAt)}，状态 ${LOCAL_STATUS_LABELS[latestStatus]}，验签来源 ${latest.verifySource ? VERIFY_SOURCE_LABELS[latest.verifySource] : "无"}。`,
     );
   }
   return lines;
@@ -359,7 +351,7 @@ export default function CloudReport() {
               </div>
               <div className="inline-flex items-center gap-2">
                 最近刷新于:{" "}
-                {formatDateTime(
+                {formatDateTimeWithSeconds(
                   latestRecord?.receivedAt ||
                     config.updatedAt ||
                     new Date().toISOString(),

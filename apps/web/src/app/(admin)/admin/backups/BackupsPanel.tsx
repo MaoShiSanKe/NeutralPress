@@ -554,7 +554,7 @@ export default function BackupsPanel() {
         </AutoTransition>
       </GridItem>
 
-      <GridItem areas={[9, 10, 11, 12]} width={3} height={0.8}>
+      <GridItem areas={[9, 10, 11, 12]} width={3} height={0.4}>
         <AutoTransition type="scale" className="h-full">
           {loadingScopes ? (
             <div className="h-full" key="loading">

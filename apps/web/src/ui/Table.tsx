@@ -22,6 +22,31 @@ export interface TableColumn<T> {
    * @default false
    */
   mono?: boolean;
+  /**
+   * 移动端卡片视图配置，仅由上层组件使用
+   */
+  mobile?: {
+    /**
+     * 控制该列在移动端卡片中的语义位置
+     * title: 卡片主标题
+     * subtitle: 卡片副标题
+     * meta: 卡片信息网格项
+     * hidden: 在移动端卡片中隐藏
+     */
+    role?: "title" | "subtitle" | "meta" | "hidden";
+    /**
+     * 卡片中显示的标签，默认回退到 title
+     */
+    label?: string;
+    /**
+     * 卡片信息项排序，数字越小越靠前
+     */
+    order?: number;
+    /**
+     * 卡片信息项占据的列宽
+     */
+    span?: 1 | 2;
+  };
 }
 
 // 自定义行组件的 Props

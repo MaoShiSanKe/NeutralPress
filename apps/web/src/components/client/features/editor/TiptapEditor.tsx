@@ -22,10 +22,6 @@ import CodeBlockShiki from "tiptap-extension-code-block-shiki";
 
 import { TableOfContents } from "@/components/client/features/editor/TableOfContents";
 import { useConfig } from "@/context/ConfigContext";
-import {
-  type EditorConfig,
-  saveEditorContent,
-} from "@/lib/client/editor-persistence";
 import { CustomHeading } from "@/lib/tiptap/custom-heading";
 import { CustomParagraph } from "@/lib/tiptap/custom-paragraph";
 import {
@@ -783,9 +779,6 @@ export interface TiptapEditorProps {
   onEditorReady?: (editor: Editor) => void;
   className?: string;
   showInvisibleChars?: boolean;
-  enablePersistence?: boolean; // 是否启用持久化
-  editorConfig?: EditorConfig; // 编辑器配置
-  storageKey?: string; // localStorage 键名
   showTableOfContents?: boolean; // 是否显示目录
   onMathClick?: (
     latex: string,
@@ -801,18 +794,13 @@ export function TiptapEditor({
   onEditorReady,
   className = "",
   showInvisibleChars = false,
-  enablePersistence = false,
-  editorConfig = {},
-  storageKey = "new",
   showTableOfContents = false,
   onMathClick,
 }: TiptapEditorProps) {
   const shikiTheme = useConfig(
     "site.shiki.theme",
   ) as ConfigType<"site.shiki.theme">;
-
-  // 用于跟踪是否是首次渲染，避免初始化时触发保存
-  const isFirstRender = useRef(true);
+  const isApplyingExternalContentRef = useRef(false);
 
   // 规范化初始内容：将 3 个或更多连续换行符替换为 2 个
   const normalizedInitialContent = content.replace(/\n{3,}/g, "\n\n");
@@ -937,27 +925,18 @@ export function TiptapEditor({
       },
     },
     onUpdate: ({ editor }) => {
+      if (isApplyingExternalContentRef.current) {
+        return;
+      }
+
       // 直接使用 Tiptap Markdown 扩展导出 Markdown
       let markdown = editor.getMarkdown();
 
       // 规范化 Markdown：将 3 个或更多连续换行符替换为 2 个
       markdown = markdown.replace(/\n{3,}/g, "\n\n");
 
-      console.log("Tiptap导出的markdown", markdown);
-
       // 调用外部onChange回调
       onChange?.(markdown);
-
-      // 如果启用了持久化,保存到localStorage
-      // 跳过首次渲染时的保存，避免覆盖刚加载的草稿
-      if (enablePersistence && !isFirstRender.current) {
-        saveEditorContent(markdown, editorConfig, true, storageKey); // isMarkdown = true
-      }
-
-      // 标记首次渲染已完成
-      if (isFirstRender.current) {
-        isFirstRender.current = false;
-      }
     },
   });
 
@@ -969,7 +948,7 @@ export function TiptapEditor({
 
   // 监听 content prop 的变化，当从其他编辑器切换回来时更新内容
   useEffect(() => {
-    if (!editor || !content) return;
+    if (!editor || content === undefined) return;
 
     // 规范化输入的 Markdown：将 3 个或更多连续换行符替换为 2 个
     const normalizedContent = content.replace(/\n{3,}/g, "\n\n");
@@ -986,7 +965,14 @@ export function TiptapEditor({
 
     // 简单比较：如果内容不同，则更新
     if (JSON.stringify(json) !== JSON.stringify(currentJson)) {
-      editor.commands.setContent(json);
+      isApplyingExternalContentRef.current = true;
+      try {
+        editor.commands.setContent(json);
+      } finally {
+        queueMicrotask(() => {
+          isApplyingExternalContentRef.current = false;
+        });
+      }
     }
   }, [editor, content]);
 

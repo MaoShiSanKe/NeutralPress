@@ -26,6 +26,7 @@ import AreaChart, {
 import { CaptchaButton } from "@/components/ui/CaptchaButton";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { formatDateTimeLocale } from "@/lib/shared/date-format";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -115,11 +116,6 @@ const responseTimeSeries: SeriesConfig[] = [
     color: "var(--color-primary)",
   },
 ];
-
-function formatDateTime(value: string | null): string {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("zh-CN");
-}
 
 function buildFormFromRecord(
   record: FriendLinkListItem | null,
@@ -475,7 +471,7 @@ export default function FriendLinkApplyClient({
         width: 180,
         mono: true,
         render: (value) =>
-          formatDateTime(typeof value === "string" ? value : null),
+          formatDateTimeLocale(typeof value === "string" ? value : null),
       },
       {
         key: "result",
@@ -697,7 +693,7 @@ export default function FriendLinkApplyClient({
                         创建时间
                       </div>
                       <div className="mt-1 text-sm font-mono">
-                        {formatDateTime(ownFriendLink.createdAt)}
+                        {formatDateTimeLocale(ownFriendLink.createdAt)}
                       </div>
                     </div>
                     <div>
@@ -705,7 +701,7 @@ export default function FriendLinkApplyClient({
                         最近更新时间
                       </div>
                       <div className="mt-1 text-sm font-mono">
-                        {formatDateTime(ownFriendLink.updatedAt)}
+                        {formatDateTimeLocale(ownFriendLink.updatedAt)}
                       </div>
                     </div>
                     <div>
@@ -739,7 +735,7 @@ export default function FriendLinkApplyClient({
                         最近检查
                       </div>
                       <div className="mt-1 text-sm font-mono">
-                        {formatDateTime(ownFriendLink.lastCheckedAt)}
+                        {formatDateTimeLocale(ownFriendLink.lastCheckedAt)}
                       </div>
                     </div>
                     <div>

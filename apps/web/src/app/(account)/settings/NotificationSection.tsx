@@ -17,7 +17,7 @@ export const NotificationSection: React.FC = () => {
         <p className="text-muted-foreground text-sm">管理你的通知偏好设置</p>
       </div>
 
-      <div className="bg-background border border-foreground/10 rounded-sm p-6">
+      <div className="bg-background border border-foreground/10 rounded-sm p-4 sm:p-6">
         {/* Web Push 通知设置 */}
         <WebPushManager />
       </div>

@@ -101,15 +101,15 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
 
       {/* 密码设置 */}
       <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+        <div className="px-4 py-4 border-b border-foreground/10 sm:px-6">
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             密码
           </h3>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {user.hasPassword ? (
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-foreground font-medium">密码已设置</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   已启用密码登录
@@ -120,11 +120,12 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                 onClick={() => onPasswordAction("change")}
                 variant="secondary"
                 size="sm"
+                className="flex-shrink-0"
               />
             </div>
           ) : (
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-foreground font-medium">未设置密码</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   设置密码后可以使用密码登录
@@ -135,6 +136,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                 onClick={() => onPasswordAction("set")}
                 variant="secondary"
                 size="sm"
+                className="flex-shrink-0"
               />
             </div>
           )}
@@ -143,12 +145,12 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
 
       {/* TOTP 两步验证管理 */}
       <div className="bg-background border border-foreground/10 rounded-sm">
-        <div className="px-6 py-4 border-b border-foreground/10">
+        <div className="px-4 py-4 border-b border-foreground/10 sm:px-6">
           <h3 className="text-lg font-medium text-foreground tracking-wider">
             两步验证（TOTP）
           </h3>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <AutoResizer duration={0.3}>
             <div>
               <AutoTransition type="fade" duration={0.2} initial={false}>
@@ -161,8 +163,8 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                   </div>
                 ) : totpEnabled ? (
                   <div key="enabled" className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <p className="text-foreground font-medium">
                           两步验证已启用
                         </p>
@@ -177,10 +179,11 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                         }
                         variant="danger"
                         size="sm"
+                        className="flex-shrink-0"
                       />
                     </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-foreground/10">
-                      <div>
+                    <div className="flex items-center justify-between gap-3 border-t border-foreground/10 pt-3">
+                      <div className="min-w-0">
                         <p className="text-foreground font-medium">备份码</p>
                         <p className="text-sm text-muted-foreground mt-1">
                           剩余 {totpBackupCodesRemaining} 个备份码
@@ -193,15 +196,16 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                         }
                         variant="secondary"
                         size="sm"
+                        className="flex-shrink-0"
                       />
                     </div>
                   </div>
                 ) : (
                   <div
                     key="disabled"
-                    className="flex items-center justify-between"
+                    className="flex items-center justify-between gap-3"
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-foreground font-medium">
                         未启用两步验证
                       </p>
@@ -214,6 +218,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                       onClick={() => totpDialogsRef.current?.openEnableDialog()}
                       variant="secondary"
                       size="sm"
+                      className="flex-shrink-0"
                     />
                   </div>
                 )}
@@ -233,30 +238,30 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
       {/* SSO 账户管理 */}
       {enabledSSOProviders.length > 0 && (
         <div className="bg-background border border-foreground/10 rounded-sm">
-          <div className="px-6 py-4 border-b border-foreground/10">
+          <div className="px-4 py-4 border-b border-foreground/10 sm:px-6">
             <h3 className="text-lg font-medium text-foreground tracking-wider">
               SSO 登录方式
             </h3>
           </div>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="space-y-4">
               {enabledSSOProviders.map((provider) => {
                 const isLinked = linkedProviders.includes(provider);
                 return (
                   <div
                     key={provider}
-                    className="flex items-center justify-between py-3 border-b border-foreground/10 last:border-0"
+                    className="flex items-center justify-between gap-3 border-b border-foreground/10 py-3 last:border-0"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex min-w-0 items-center gap-4">
                       <div className="w-10 h-10 flex items-center justify-center">
                         {getProviderIcon(provider)}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-medium text-foreground">
                           {getProviderName(provider)}
                         </p>
                         {isLinked ? (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-muted-foreground break-all">
                             已绑定 -{" "}
                             {
                               user.linkedAccounts.find(
@@ -278,6 +283,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                         onClick={() => onUnlinkSSO(provider)}
                         variant="danger"
                         size="sm"
+                        className="flex-shrink-0"
                       />
                     ) : (
                       <Button
@@ -285,6 +291,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                         onClick={() => onLinkSSO(provider)}
                         variant="secondary"
                         size="sm"
+                        className="flex-shrink-0"
                       />
                     )}
                   </div>
@@ -298,12 +305,12 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
       {/* 通行密钥管理 */}
       {passkeyEnabled && (
         <div className="bg-background border border-foreground/10 rounded-sm">
-          <div className="px-6 py-4 border-b border-foreground/10">
+          <div className="px-4 py-4 border-b border-foreground/10 sm:px-6">
             <h3 className="text-lg font-medium text-foreground tracking-wider">
               通行密钥管理
             </h3>
           </div>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <PasskeyManager />
           </div>
         </div>

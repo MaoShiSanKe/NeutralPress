@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   RiAlignCenter,
   RiAlignLeft,
@@ -65,8 +71,10 @@ import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import { createArray } from "@/lib/client/create-array";
 import {
   clearEditorContent,
+  flushEditorContentSave,
   loadEditorContent,
   saveEditorContent,
+  scheduleEditorContentSave,
 } from "@/lib/client/editor-persistence";
 import type { EditorCoreProps, EditorMode } from "@/types/editor-config";
 import { Button } from "@/ui/Button";
@@ -123,10 +131,12 @@ export function EditorCore({
   const [initialContent, setInitialContent] = useState<string | undefined>(
     content,
   );
-  const [markdownContent, setMarkdownContent] = useState<string>("");
+  const [markdownContent, setMarkdownContent] = useState<string>(content || "");
   const toast = useToast();
   const hasLoadedFromStorage = useRef(false);
   const isInitialMount = useRef(true);
+  const lastPersistedContentRef = useRef<string | null>(null);
+  const lastPersistedConfigRef = useRef<string | null>(null);
 
   // 注入 toast 实例到 TiptapEditor
   useEffect(() => {
@@ -191,6 +201,50 @@ export function EditorCore({
     return availableModes[0] || "visual";
   });
 
+  const createPersistenceConfig = useCallback(
+    (mode: EditorMode = editorType) => ({
+      editorType: String(mode),
+      isFullscreen,
+      showTableOfContents,
+    }),
+    [editorType, isFullscreen, showTableOfContents],
+  );
+
+  const persistDraft = useCallback(
+    (
+      nextContent: string,
+      config: ReturnType<
+        typeof createPersistenceConfig
+      > = createPersistenceConfig(),
+    ) => {
+      const serializedConfig = JSON.stringify(config);
+
+      if (
+        nextContent === lastPersistedContentRef.current &&
+        serializedConfig === lastPersistedConfigRef.current
+      ) {
+        return;
+      }
+
+      saveEditorContent(nextContent, config, true, storageKey);
+      lastPersistedContentRef.current = nextContent;
+      lastPersistedConfigRef.current = serializedConfig;
+    },
+    [createPersistenceConfig, storageKey],
+  );
+
+  const scheduleDraftSave = useCallback(
+    (
+      nextContent: string,
+      config: ReturnType<
+        typeof createPersistenceConfig
+      > = createPersistenceConfig(),
+    ) => {
+      scheduleEditorContentSave(nextContent, config, storageKey, 5000);
+    },
+    [createPersistenceConfig, storageKey],
+  );
+
   const loadContentFromStorage = useCallback(() => {
     const savedData = loadEditorContent(storageKey);
     if (savedData && typeof savedData.content === "string") {
@@ -198,23 +252,19 @@ export function EditorCore({
         content: savedData.content,
         hasSavedDraft: true,
         lastUpdatedAt: savedData.lastUpdatedAt,
+        config: savedData.config,
       };
     }
 
     const fallbackContent = content || "";
-    saveEditorContent(
-      fallbackContent,
-      { editorType: String(editorType) },
-      true,
-      storageKey,
-    );
 
     return {
       content: fallbackContent,
       hasSavedDraft: false,
       lastUpdatedAt: null,
+      config: createPersistenceConfig(),
     };
-  }, [content, editorType, storageKey]);
+  }, [content, createPersistenceConfig, storageKey]);
 
   const extractTitleFromMarkdown = useCallback(
     (markdown: string): string | null => {
@@ -341,10 +391,6 @@ export function EditorCore({
             setIsCodeBlockToolbarVisible(state.isCodeBlock);
             setCurrentCodeBlockLanguage(state.currentCodeBlockLanguage);
           },
-          onContentChange: () => {
-            // 内容变化时的处理
-            console.log("Content changed via adapter");
-          },
         },
       );
     }
@@ -354,6 +400,21 @@ export function EditorCore({
       monacoDisposeRef.current = null;
       adapterManagerRef.current?.destroy();
       adapterManagerRef.current = null;
+    };
+  }, [storageKey]);
+
+  useEffect(() => {
+    const flushDraft = () => {
+      flushEditorContentSave(storageKey);
+    };
+
+    window.addEventListener("beforeunload", flushDraft);
+    window.addEventListener("pagehide", flushDraft);
+
+    return () => {
+      flushDraft();
+      window.removeEventListener("beforeunload", flushDraft);
+      window.removeEventListener("pagehide", flushDraft);
     };
   }, [storageKey]);
 
@@ -367,6 +428,11 @@ export function EditorCore({
     setInitialContent(storageContent);
     setMarkdownContent(storageContent);
     hasLoadedFromStorage.current = true;
+    lastPersistedContentRef.current = storageContent;
+    lastPersistedConfigRef.current = JSON.stringify(
+      storageData.config ?? createPersistenceConfig(),
+    );
+    onChange?.(storageContent);
     syncTitleFromContent(storageContent);
 
     if (storageData.hasSavedDraft && isInitialMount.current) {
@@ -381,12 +447,12 @@ export function EditorCore({
           const fallbackContent = content || "";
           setInitialContent(fallbackContent);
           setMarkdownContent(fallbackContent);
-          saveEditorContent(
-            fallbackContent,
-            { editorType: String(editorType) },
-            true,
-            storageKey,
+          lastPersistedContentRef.current = fallbackContent;
+          lastPersistedConfigRef.current = JSON.stringify(
+            createPersistenceConfig(),
           );
+          onChange?.(fallbackContent);
+          syncTitleFromContent(fallbackContent);
           toast.success("已撤销", "草稿已删除");
         },
       });
@@ -396,8 +462,9 @@ export function EditorCore({
     }
   }, [
     content,
-    editorType,
+    createPersistenceConfig,
     loadContentFromStorage,
+    onChange,
     storageKey,
     syncTitleFromContent,
     toast,
@@ -440,16 +507,7 @@ export function EditorCore({
 
       const latestContent = getCurrentEditorContent();
 
-      saveEditorContent(
-        latestContent,
-        {
-          editorType: String(nextMode),
-          isFullscreen,
-          showTableOfContents,
-        },
-        true,
-        storageKey,
-      );
+      persistDraft(latestContent, createPersistenceConfig(nextMode));
 
       setInitialContent(latestContent);
       setMarkdownContent(latestContent);
@@ -461,11 +519,10 @@ export function EditorCore({
     },
     [
       editorType,
+      createPersistenceConfig,
       getCurrentEditorContent,
-      isFullscreen,
       onModeChange,
-      showTableOfContents,
-      storageKey,
+      persistDraft,
       syncTitleFromContent,
     ],
   );
@@ -473,33 +530,13 @@ export function EditorCore({
   const handleEditorContentChange = useCallback(
     (nextContent: string) => {
       setMarkdownContent(nextContent);
-
-      try {
-        saveEditorContent(
-          nextContent,
-          {
-            editorType: String(editorType),
-            isFullscreen,
-            showTableOfContents,
-          },
-          true,
-          storageKey,
-        );
-      } catch (error) {
-        console.error("Failed to auto-save draft:", error);
-      }
-
+      scheduleDraftSave(nextContent);
       onChange?.(nextContent);
-      syncTitleFromContent(nextContent);
+      startTransition(() => {
+        syncTitleFromContent(nextContent);
+      });
     },
-    [
-      editorType,
-      isFullscreen,
-      onChange,
-      showTableOfContents,
-      storageKey,
-      syncTitleFromContent,
-    ],
+    [onChange, scheduleDraftSave, syncTitleFromContent],
   );
 
   useEffect(() => {
@@ -535,16 +572,7 @@ export function EditorCore({
       return;
     }
 
-    saveEditorContent(
-      nextContent,
-      {
-        editorType: String(editorType),
-        isFullscreen,
-        showTableOfContents,
-      },
-      true,
-      storageKey,
-    );
+    scheduleDraftSave(nextContent);
 
     setInitialContent(nextContent);
     setMarkdownContent(nextContent);
@@ -581,11 +609,9 @@ export function EditorCore({
     editorType,
     extractTitleFromMarkdown,
     getCurrentEditorContent,
-    isFullscreen,
     monacoEditor,
     onChange,
-    showTableOfContents,
-    storageKey,
+    scheduleDraftSave,
     title,
     upsertTitleInMarkdown,
   ]);
@@ -898,36 +924,13 @@ export function EditorCore({
   };
 
   // ==================== 编辑器就绪回调 ====================
-  const handleEditorReady = useCallback(
-    (editorInstance: TiptapEditorType) => {
-      setEditor(editorInstance);
+  const handleEditorReady = useCallback((editorInstance: TiptapEditorType) => {
+    setEditor(editorInstance);
 
-      if (adapterManagerRef.current) {
-        adapterManagerRef.current.registerTiptapEditor(editorInstance);
-      }
-
-      const savedData = loadEditorContent(storageKey);
-      const storedContent =
-        savedData && typeof savedData.content === "string"
-          ? savedData.content
-          : "";
-
-      if (!storedContent) return;
-
-      try {
-        // @ts-expect-error - markdown.parse方法可能没有类型定义
-        const parsed = editorInstance.markdown.parse(storedContent);
-        editorInstance.commands.setContent(parsed);
-        setInitialContent(storedContent);
-      } catch (error) {
-        console.error(
-          "Failed to initialize visual editor from storage:",
-          error,
-        );
-      }
-    },
-    [storageKey],
-  );
+    if (adapterManagerRef.current) {
+      adapterManagerRef.current.registerTiptapEditor(editorInstance);
+    }
+  }, []);
 
   // ==================== 标题选项 ====================
   const headingOptions: DropdownOption[] = [
@@ -1436,13 +1439,6 @@ export function EditorCore({
               className="h-full"
               showInvisibleChars={showInvisibleChars}
               showTableOfContents={showTableOfContents}
-              enablePersistence={true}
-              editorConfig={{
-                editorType: String(editorType),
-                isFullscreen,
-                showTableOfContents,
-              }}
-              storageKey={storageKey}
               onMathClick={handleMathClick}
             />
 
@@ -1506,19 +1502,6 @@ export function EditorCore({
                     monacoInstance,
                   );
                 }
-              }
-
-              const savedData = loadEditorContent(storageKey);
-              const storedContent =
-                savedData && typeof savedData.content === "string"
-                  ? savedData.content
-                  : "";
-              try {
-                monacoInstance.setValue(storedContent);
-                monacoInstance.setPosition({ lineNumber: 1, column: 1 });
-                setMarkdownContent(storedContent);
-              } catch (error) {
-                console.error("Failed to initialize code editor:", error);
               }
             }}
           />

@@ -10,9 +10,11 @@ import React, {
 import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
+  RiCheckDoubleLine,
   RiCloseLine,
   RiFilterLine,
   RiSearchLine,
+  RiSubtractLine,
 } from "@remixicon/react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -119,6 +121,44 @@ export interface GridTableProps<T extends Record<string, unknown>> {
   contentHeader?: React.ReactNode;
   // 自定义行渲染组件（用于拖拽等功能）
   rowComponent?: React.ComponentType<RowComponentProps>;
+  // 移动端展示模式
+  mobileMode?: "auto" | "cards" | "table";
+}
+
+interface MobileColumnDescriptor<T extends Record<string, unknown>> {
+  column: TableColumn<T>;
+  index: number;
+  role: "title" | "subtitle" | "meta" | "hidden";
+  label: string;
+  order: number;
+  span: 1 | 2;
+  isIdentifier: boolean;
+  isTitleLike: boolean;
+  isSubtitleLike: boolean;
+}
+
+const MOBILE_TITLE_RE =
+  /(title|name|username|nickname|originalname|filename|slug|path|label)/i;
+const MOBILE_SUBTITLE_RE =
+  /(author|email|role|status|type|category|created|updated|time|date|owner)/i;
+const MOBILE_IDENTIFIER_RE = /(^|[_-])(id|uid)([_-]|$)|\b(id|uid)\b/i;
+function hasRenderableValue(value: React.ReactNode): boolean {
+  if (value === null || value === undefined || value === "") {
+    return false;
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  return true;
+}
+
+function getMobileColumnLabel(label: string, key: string): string {
+  const trimmedLabel = label.trim();
+  if (trimmedLabel.length > 0) {
+    return trimmedLabel;
+  }
+
+  return key;
 }
 
 export default function GridTable<T extends Record<string, unknown>>({
@@ -162,9 +202,11 @@ export default function GridTable<T extends Record<string, unknown>>({
   footerHeight = 0.1,
   contentHeader,
   rowComponent,
+  mobileMode = "auto",
 }: GridTableProps<T>) {
   // 检测是否为移动设备
   const isMobile = useMobile();
+  const useMobileCards = isMobile && mobileMode !== "table";
 
   // 选中状态管理（支持受控/非受控模式）
   const [internalSelectedKeys, setInternalSelectedKeys] = useState<
@@ -309,6 +351,104 @@ export default function GridTable<T extends Record<string, unknown>>({
     },
     [rowKey],
   );
+
+  const renderColumnContent = useCallback(
+    (column: TableColumn<T>, record: T, index: number): React.ReactNode => {
+      if (column.render) {
+        return column.render(
+          column.dataIndex ? record[column.dataIndex] : record,
+          record,
+          index,
+        );
+      }
+
+      const value = column.dataIndex ? record[column.dataIndex] : "";
+      if (value === null || value === undefined) return "";
+      if (typeof value === "object") return JSON.stringify(value);
+      return String(value);
+    },
+    [],
+  );
+
+  const isInteractiveTarget = useCallback((target: HTMLElement | null) => {
+    if (!target) return false;
+
+    return Boolean(
+      target.tagName === "A" ||
+        target.tagName === "BUTTON" ||
+        target.tagName === "INPUT" ||
+        target.tagName === "SELECT" ||
+        target.tagName === "TEXTAREA" ||
+        target.closest("a") ||
+        target.closest("button") ||
+        target.closest("input") ||
+        target.closest("select") ||
+        target.closest("textarea") ||
+        target.closest('[role="button"]') ||
+        target.closest('[data-action-cell="true"]'),
+    );
+  }, []);
+
+  const mobileColumnDescriptors = useMemo<MobileColumnDescriptor<T>[]>(() => {
+    return columns.map((column, index) => {
+      const searchText = `${column.key} ${column.title}`.toLowerCase();
+      const mobileConfig = column.mobile;
+      const explicitRole = mobileConfig?.role;
+      const isIdentifier =
+        column.mono ||
+        MOBILE_IDENTIFIER_RE.test(searchText) ||
+        ["id", "uid"].includes(column.key.toLowerCase());
+      const isTitleLike = MOBILE_TITLE_RE.test(searchText);
+      const isSubtitleLike = MOBILE_SUBTITLE_RE.test(searchText);
+
+      return {
+        column,
+        index,
+        role: explicitRole ?? "meta",
+        label:
+          mobileConfig?.label ?? getMobileColumnLabel(column.title, column.key),
+        order:
+          mobileConfig?.order ??
+          index +
+            (isIdentifier ? 100 : 0) +
+            (column.key.startsWith("__") ? 1000 : 0),
+        span: mobileConfig?.span ?? 1,
+        isIdentifier,
+        isTitleLike,
+        isSubtitleLike,
+      };
+    });
+  }, [columns]);
+
+  const mobileTitleColumn = useMemo(() => {
+    return mobileColumnDescriptors.find(
+      (descriptor) =>
+        descriptor.role === "title" && !descriptor.column.key.startsWith("__"),
+    );
+  }, [mobileColumnDescriptors]);
+
+  const mobileSubtitleColumn = useMemo(() => {
+    return mobileColumnDescriptors.find(
+      (descriptor) =>
+        descriptor.role === "subtitle" &&
+        descriptor.column.key !== mobileTitleColumn?.column.key &&
+        !descriptor.column.key.startsWith("__"),
+    );
+  }, [mobileColumnDescriptors, mobileTitleColumn]);
+
+  const mobileMetaColumns = useMemo(() => {
+    return mobileColumnDescriptors
+      .filter((descriptor) => {
+        if (descriptor.role === "hidden") return false;
+        if (descriptor.column.key.startsWith("__")) return false;
+        if (descriptor.column.key === mobileTitleColumn?.column.key)
+          return false;
+        if (descriptor.column.key === mobileSubtitleColumn?.column.key)
+          return false;
+        return true;
+      })
+      .sort((left, right) => left.order - right.order);
+  }, [mobileColumnDescriptors, mobileSubtitleColumn, mobileTitleColumn]);
 
   // 全选/取消全选
   const handleSelectAll = useCallback(
@@ -738,6 +878,180 @@ export default function GridTable<T extends Record<string, unknown>>({
     getRowKey,
   ]);
 
+  const getMobileActionButtonVariant = useCallback(
+    (
+      action: ActionButton,
+      fallbackVariant: NonNullable<ButtonProps["variant"]>,
+    ): NonNullable<ButtonProps["variant"]> => {
+      if (action.variant === "danger") {
+        return "ghost";
+      }
+
+      return action.variant || fallbackVariant;
+    },
+    [],
+  );
+
+  const getMobileActionButtonClassName = useCallback((action: ActionButton) => {
+    const baseClassName = "justify-start";
+
+    if (action.variant === "danger") {
+      return `${baseClassName} !bg-transparent !text-error hover:!bg-transparent hover:!text-error`;
+    }
+
+    return baseClassName;
+  }, []);
+
+  const renderMobileCard = useCallback(
+    (record: T, index: number) => {
+      const rowKeyValue = getRowKey(record);
+      const titleContent = mobileTitleColumn
+        ? renderColumnContent(mobileTitleColumn.column, record, index)
+        : null;
+      const subtitleContent = mobileSubtitleColumn
+        ? renderColumnContent(mobileSubtitleColumn.column, record, index)
+        : null;
+      const fieldItems = mobileMetaColumns
+        .map((descriptor) => ({
+          key: descriptor.column.key,
+          label: descriptor.label,
+          span: descriptor.span,
+          content: renderColumnContent(descriptor.column, record, index),
+        }))
+        .filter((field) => hasRenderableValue(field.content));
+      const actions = rowActions?.(record) ?? [];
+      const hasHeaderContent =
+        hasRenderableValue(titleContent) || hasRenderableValue(subtitleContent);
+
+      return (
+        <motion.article
+          key={rowKeyValue}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 0.18,
+            delay: Math.min(index * 0.03, 0.24),
+          }}
+          className={`
+            rounded-sm border border-border/80 bg-background/95
+            px-4 py-4 shadow-[0_12px_40px_rgba(15,23,42,0.06)]
+            text-left
+            [&_.text-center]:text-left
+            [&_.justify-center]:justify-start
+            ${onRowClick ? "cursor-pointer" : ""}
+          `}
+          onClick={(event) => {
+            if (!onRowClick) return;
+            if (isInteractiveTarget(event.target as HTMLElement)) return;
+            onRowClick(record, index, event);
+          }}
+        >
+          {hasHeaderContent ? (
+            <div className="flex items-start gap-3">
+              {enableActions && (
+                <div className="shrink-0 pt-0.5" data-action-cell="true">
+                  <Checkbox
+                    checked={selectedKeys.has(rowKeyValue)}
+                    onChange={(event) =>
+                      handleSelectRow(rowKeyValue, event.target.checked, index)
+                    }
+                    size="md"
+                  />
+                </div>
+              )}
+
+              <div className="min-w-0 flex-1">
+                {hasRenderableValue(titleContent) && (
+                  <div className="text-left text-base leading-6 text-foreground break-words">
+                    {titleContent}
+                  </div>
+                )}
+                {hasRenderableValue(subtitleContent) && (
+                  <div className="mt-1 text-left text-sm text-muted-foreground break-words">
+                    {subtitleContent}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : enableActions ? (
+            <div className="mb-4 flex items-center" data-action-cell="true">
+              <Checkbox
+                checked={selectedKeys.has(rowKeyValue)}
+                onChange={(event) =>
+                  handleSelectRow(rowKeyValue, event.target.checked, index)
+                }
+                size="md"
+              />
+            </div>
+          ) : null}
+
+          {fieldItems.length > 0 && (
+            <div
+              className={`grid grid-cols-2 gap-x-4 gap-y-3 ${
+                hasHeaderContent || enableActions
+                  ? "mt-4 border-t border-border/60 pt-4"
+                  : ""
+              }`}
+            >
+              {fieldItems.map((field) => (
+                <div
+                  key={field.key}
+                  className={`min-w-0 text-left ${
+                    field.span === 2 ? "col-span-2" : ""
+                  }`}
+                >
+                  <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                    {field.label}
+                  </div>
+                  <div className="mt-1 text-left text-sm leading-5 text-foreground break-words [&_.justify-center]:justify-start [&_.text-center]:text-left">
+                    {field.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {actions.length > 0 && (
+            <div
+              className="mt-4 grid grid-cols-2 gap-2 border-t border-border/60 pt-4"
+              data-action-cell="true"
+            >
+              {actions.map((action) => (
+                <Button
+                  key={action.label}
+                  label={action.label}
+                  variant={getMobileActionButtonVariant(action, "ghost")}
+                  size="sm"
+                  icon={action.icon}
+                  onClick={action.onClick}
+                  disabled={action.disabled}
+                  loading={action.loading}
+                  fullWidth
+                  className={getMobileActionButtonClassName(action)}
+                />
+              ))}
+            </div>
+          )}
+        </motion.article>
+      );
+    },
+    [
+      enableActions,
+      getRowKey,
+      getMobileActionButtonClassName,
+      getMobileActionButtonVariant,
+      handleSelectRow,
+      isInteractiveTarget,
+      mobileMetaColumns,
+      mobileSubtitleColumn,
+      mobileTitleColumn,
+      onRowClick,
+      renderColumnContent,
+      rowActions,
+      selectedKeys,
+    ],
+  );
+
   return (
     <>
       {/* 表头 */}
@@ -745,10 +1059,41 @@ export default function GridTable<T extends Record<string, unknown>>({
         areas={[1]}
         width={24}
         height={headerHeight}
-        className="flex items-center justify-between text-2xl px-10"
+        className={`flex justify-between gap-3 ${
+          useMobileCards
+            ? "items-center px-4 py-4 text-xl"
+            : "items-center px-10 text-2xl"
+        }`}
       >
-        <div>{title}</div>
-        <div className="flex items-center gap-4">
+        <div className={useMobileCards ? "min-w-0 flex-1 text-left" : ""}>
+          {title}
+        </div>
+        <div
+          className={`flex items-center gap-2 ${
+            useMobileCards ? "ml-auto shrink-0 justify-end" : "gap-4"
+          }`}
+        >
+          {useMobileCards && enableActions && data.length > 0 && (
+            <Tooltip
+              content={isAllSelected ? "取消全选" : "全选本页"}
+              placement="bottom"
+            >
+              <Clickable
+                onClick={() => handleSelectAll(!isAllSelected)}
+                className={`
+                  p-2 rounded transition-colors inline-flex
+                  ${isAllSelected ? "text-background bg-foreground" : "hover:bg-muted"}
+                `}
+                hoverScale={1.1}
+              >
+                {isAllSelected ? (
+                  <RiSubtractLine size="1em" />
+                ) : (
+                  <RiCheckDoubleLine size="1em" />
+                )}
+              </Clickable>
+            </Tooltip>
+          )}
           {onSearchChange && (
             <>
               {isMobile ? (
@@ -869,7 +1214,13 @@ export default function GridTable<T extends Record<string, unknown>>({
                   }}
                   className="overflow-hidden"
                 >
-                  <div className="flex items-center justify-between px-10 py-2 border-b border-muted">
+                  <div
+                    className={`border-b border-muted ${
+                      useMobileCards
+                        ? "px-4 py-3"
+                        : "flex items-center justify-between px-10 py-2"
+                    }`}
+                  >
                     <div className="flex items-center gap-4">
                       <AutoTransition key={selectedKeys.size}>
                         <span className="text-primary">
@@ -877,17 +1228,33 @@ export default function GridTable<T extends Record<string, unknown>>({
                         </span>
                       </AutoTransition>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div
+                      className={`${
+                        useMobileCards
+                          ? "mt-3 grid grid-cols-2 gap-2"
+                          : "flex items-center gap-2"
+                      }`}
+                    >
                       {batchActions.map((action) => (
                         <Button
                           key={action.label}
                           label={action.label || "操作"}
-                          variant={action.variant || "outline"}
+                          variant={
+                            useMobileCards
+                              ? getMobileActionButtonVariant(action, "outline")
+                              : action.variant || "outline"
+                          }
                           size={"sm"}
                           icon={action.icon}
                           onClick={action.onClick}
                           disabled={action.disabled || selectedKeys.size === 0}
                           loading={action.loading}
+                          fullWidth={useMobileCards}
+                          className={
+                            useMobileCards
+                              ? getMobileActionButtonClassName(action)
+                              : ""
+                          }
                         />
                       ))}
                     </div>
@@ -906,24 +1273,40 @@ export default function GridTable<T extends Record<string, unknown>>({
               </div>
             ) : (
               <div className="h-full flex flex-col" key="content">
-                <div className="flex-1 overflow-auto">
-                  <Table
-                    columns={enhancedColumns}
-                    data={data}
-                    striped={striped}
-                    hoverable={hoverable}
-                    bordered={bordered}
-                    size={size}
-                    emptyText={emptyText}
-                    rowKey={rowKey}
-                    stickyHeader={stickyHeader}
-                    maxHeight={maxHeight}
-                    padding={padding}
-                    onSortChange={onSortChange}
-                    onRowClick={onRowClick}
-                    rowComponent={rowComponent}
-                  />
-                </div>
+                {useMobileCards ? (
+                  <div className="flex-1 overflow-auto">
+                    {data.length === 0 ? (
+                      <div className="px-4 py-12 text-center text-muted-foreground">
+                        {emptyText}
+                      </div>
+                    ) : (
+                      <div className="space-y-3 px-4 py-4">
+                        {data.map((record, index) =>
+                          renderMobileCard(record, index),
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-auto">
+                    <Table
+                      columns={enhancedColumns}
+                      data={data}
+                      striped={striped}
+                      hoverable={hoverable}
+                      bordered={bordered}
+                      size={size}
+                      emptyText={emptyText}
+                      rowKey={rowKey}
+                      stickyHeader={stickyHeader}
+                      maxHeight={maxHeight}
+                      padding={padding}
+                      onSortChange={onSortChange}
+                      onRowClick={onRowClick}
+                      rowComponent={rowComponent}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </AutoTransition>
@@ -935,69 +1318,143 @@ export default function GridTable<T extends Record<string, unknown>>({
         areas={[12]}
         width={24}
         height={footerHeight}
-        className="flex justify-between pl-10 pr-6"
+        className={
+          useMobileCards ? "px-4 py-4" : "flex justify-between pl-10 pr-6"
+        }
       >
-        <div className="flex items-center gap-2">
-          <AutoTransition key={totalRecords} type="fade">
-            共 {totalRecords} 条
-          </AutoTransition>
-          <span>/</span>
-          <AutoTransition key={page + "" + totalRecords} type="fade">
-            第 {(page - 1) * pageSize + 1}
-            {" - "}
-            {Math.min(page * pageSize, totalRecords)} 条
-          </AutoTransition>
-          <span>/</span>
-          <div className="flex items-center gap-2">
-            {onPageSizeChange && (
-              <Select
-                value={pageSize}
-                onChange={(value) => {
-                  onPageSizeChange(Number(value));
-                  onPageChange(1);
-                }}
-                options={[
-                  { value: 10, label: "10 条/页" },
-                  { value: 25, label: "25 条/页" },
-                  { value: 50, label: "50 条/页" },
-                  { value: 100, label: "100 条/页" },
-                  { value: 250, label: "250 条/页" },
-                  { value: 500, label: "500 条/页" },
-                ]}
-                size="sm"
-              />
+        {useMobileCards ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3 text-sm text-muted-foreground sm:text-base">
+                <span className="whitespace-nowrap">
+                  <AutoTransition key={totalRecords} type="fade">
+                    共 {totalRecords} 条
+                  </AutoTransition>
+                </span>
+                <span className="whitespace-nowrap">
+                  <AutoTransition key={page + "" + totalRecords} type="fade">
+                    第 {(page - 1) * pageSize + 1}
+                    {" - "}
+                    {Math.min(page * pageSize, totalRecords)} 条
+                  </AutoTransition>
+                </span>
+              </div>
+
+              {onPageSizeChange && (
+                <div className="shrink-0">
+                  <Select
+                    value={pageSize}
+                    onChange={(value) => {
+                      onPageSizeChange(Number(value));
+                      onPageChange(1);
+                    }}
+                    options={[
+                      { value: 10, label: "10 条/页" },
+                      { value: 25, label: "25 条/页" },
+                      { value: 50, label: "50 条/页" },
+                      { value: 100, label: "100 条/页" },
+                      { value: 250, label: "250 条/页" },
+                      { value: 500, label: "500 条/页" },
+                    ]}
+                    size="sm"
+                  />
+                </div>
+              )}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+                <Clickable
+                  onClick={() => onPageChange(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  className="rounded-sm px-4 py-2 transition-colors hover:bg-muted"
+                  enableHoverScale={false}
+                >
+                  <RiArrowLeftSLine />
+                </Clickable>
+
+                <span className="text-sm">
+                  <AutoTransition key={page} type="fade">
+                    第 {page} / {totalPages} 页
+                  </AutoTransition>
+                </span>
+
+                <Clickable
+                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                  className="rounded-sm px-4 py-2 transition-colors hover:bg-muted"
+                  enableHoverScale={false}
+                >
+                  <RiArrowRightSLine />
+                </Clickable>
+              </div>
             )}
           </div>
-        </div>
-        <div className="flex items-center">
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Clickable
-                onClick={() => onPageChange(Math.max(1, page - 1))}
-                disabled={page === 1}
-                className="px-4 py-2 rounded transition-colors hover:bg-muted"
-                enableHoverScale={false}
-              >
-                <RiArrowLeftSLine />
-              </Clickable>
-
-              <span>
-                <AutoTransition key={page} type="fade">
-                  第 {page} / {totalPages} 页
-                </AutoTransition>
-              </span>
-
-              <Clickable
-                onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                disabled={page === totalPages}
-                className="px-4 py-2 rounded transition-colors hover:bg-muted"
-                enableHoverScale={false}
-              >
-                <RiArrowRightSLine />
-              </Clickable>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              <AutoTransition key={totalRecords} type="fade">
+                共 {totalRecords} 条
+              </AutoTransition>
+              <span>/</span>
+              <AutoTransition key={page + "" + totalRecords} type="fade">
+                第 {(page - 1) * pageSize + 1}
+                {" - "}
+                {Math.min(page * pageSize, totalRecords)} 条
+              </AutoTransition>
+              <span>/</span>
+              <div className="flex items-center gap-2">
+                {onPageSizeChange && (
+                  <Select
+                    value={pageSize}
+                    onChange={(value) => {
+                      onPageSizeChange(Number(value));
+                      onPageChange(1);
+                    }}
+                    options={[
+                      { value: 10, label: "10 条/页" },
+                      { value: 25, label: "25 条/页" },
+                      { value: 50, label: "50 条/页" },
+                      { value: 100, label: "100 条/页" },
+                      { value: 250, label: "250 条/页" },
+                      { value: 500, label: "500 条/页" },
+                    ]}
+                    size="sm"
+                  />
+                )}
+              </div>
             </div>
-          )}
-        </div>
+            <div className="flex items-center">
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2">
+                  <Clickable
+                    onClick={() => onPageChange(Math.max(1, page - 1))}
+                    disabled={page === 1}
+                    className="px-4 py-2 rounded transition-colors hover:bg-muted"
+                    enableHoverScale={false}
+                  >
+                    <RiArrowLeftSLine />
+                  </Clickable>
+
+                  <span>
+                    <AutoTransition key={page} type="fade">
+                      第 {page} / {totalPages} 页
+                    </AutoTransition>
+                  </span>
+
+                  <Clickable
+                    onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                    disabled={page === totalPages}
+                    className="px-4 py-2 rounded transition-colors hover:bg-muted"
+                    enableHoverScale={false}
+                  >
+                    <RiArrowRightSLine />
+                  </Clickable>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </GridItem>
 
       {/* 筛选 Dialog */}
@@ -1007,8 +1464,10 @@ export default function GridTable<T extends Record<string, unknown>>({
         title="筛选条件"
         size="md"
       >
-        <div className="px-6 py-6 space-y-6">
-          <div className="space-y-6">
+        <div
+          className={isMobile ? "px-4 py-5 space-y-5" : "px-6 py-6 space-y-6"}
+        >
+          <div className={isMobile ? "space-y-5" : "space-y-6"}>
             {filterConfig?.map((config) => (
               <div key={config.key}>
                 {config.type !== "input" && (
@@ -1017,7 +1476,7 @@ export default function GridTable<T extends Record<string, unknown>>({
                   </label>
                 )}
                 {config.type === "checkboxGroup" && config.options && (
-                  <div className="flex gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     {config.options.map((option) => {
                       const currentValue = tempFilterValues[config.key];
                       const currentArray = Array.isArray(currentValue)
@@ -1052,7 +1511,7 @@ export default function GridTable<T extends Record<string, unknown>>({
                   />
                 )}
                 {config.type === "dateRange" && config.dateFields && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Input
                         label="开始时间"
@@ -1108,7 +1567,7 @@ export default function GridTable<T extends Record<string, unknown>>({
                   </div>
                 )}
                 {config.type === "range" && config.rangeFields && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Input
                         label={config.placeholderMin || "最小值"}
@@ -1168,27 +1627,55 @@ export default function GridTable<T extends Record<string, unknown>>({
           </div>
 
           {/* 操作按钮 */}
-          <div className="flex justify-between pt-4 border-t border-foreground/10">
-            <Button
-              label="重置"
-              variant="ghost"
-              onClick={resetFilters}
-              size="sm"
-            />
-            <div className="flex gap-4">
-              <Button
-                label="取消"
-                variant="ghost"
-                onClick={closeFilterDialog}
-                size="sm"
-              />
-              <Button
-                label="确认"
-                variant="primary"
-                onClick={applyFilters}
-                size="sm"
-              />
-            </div>
+          <div className="pt-4 border-t border-foreground/10">
+            {isMobile ? (
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  label="确认"
+                  variant="primary"
+                  onClick={applyFilters}
+                  size="sm"
+                  fullWidth
+                />
+                <Button
+                  label="取消"
+                  variant="ghost"
+                  onClick={closeFilterDialog}
+                  size="sm"
+                  fullWidth
+                />
+                <Button
+                  label="重置"
+                  variant="ghost"
+                  onClick={resetFilters}
+                  size="sm"
+                  fullWidth
+                />
+              </div>
+            ) : (
+              <div className="flex justify-between">
+                <Button
+                  label="重置"
+                  variant="ghost"
+                  onClick={resetFilters}
+                  size="sm"
+                />
+                <div className="flex gap-4">
+                  <Button
+                    label="取消"
+                    variant="ghost"
+                    onClick={closeFilterDialog}
+                    size="sm"
+                  />
+                  <Button
+                    label="确认"
+                    variant="primary"
+                    onClick={applyFilters}
+                    size="sm"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </Dialog>
@@ -1200,7 +1687,7 @@ export default function GridTable<T extends Record<string, unknown>>({
         title="搜索"
         size="sm"
       >
-        <div className="px-6 py-6">
+        <div className={isMobile ? "px-4 py-5" : "px-6 py-6"}>
           <Input
             label="搜索关键词"
             value={searchValue}
@@ -1210,18 +1697,26 @@ export default function GridTable<T extends Record<string, unknown>>({
             size="md"
             autoFocus
           />
-          <div className="flex justify-end gap-4 pt-6 border-t border-foreground/10 mt-6">
+          <div
+            className={`border-t border-foreground/10 mt-6 pt-6 ${
+              isMobile ? "grid grid-cols-2 gap-2" : "flex justify-end gap-4"
+            }`}
+          >
             <Button
               label="取消"
               variant="ghost"
               onClick={() => setSearchDialogOpen(false)}
               size="sm"
+              fullWidth={isMobile}
+              className={isMobile ? "justify-start" : ""}
             />
             <Button
               label="搜索"
               variant="primary"
               onClick={() => setSearchDialogOpen(false)}
               size="sm"
+              fullWidth={isMobile}
+              className={isMobile ? "justify-start" : ""}
             />
           </div>
         </div>

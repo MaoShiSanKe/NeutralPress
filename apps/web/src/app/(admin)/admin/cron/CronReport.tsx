@@ -372,7 +372,7 @@ export default function CronReport() {
 
   return (
     <>
-      <GridItem areas={[1, 2, 3, 4]} width={3} height={0.8}>
+      <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
         <AutoTransition type="scale" className="h-full">
           {config ? (
             <div

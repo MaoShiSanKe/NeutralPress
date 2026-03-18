@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { updatePage } from "@/actions/page";
 import type { ResolvedBlock } from "@/blocks/core/definition";
 import type { AllBlockConfigs } from "@/blocks/core/types/base";
+import LayoutEditorDesktopNotice from "@/components/client/features/page-editor/LayoutEditorDesktopNotice";
 import VisualPageEditor from "@/components/server/features/page-editor/VisualPageEditor";
+import { useMobile } from "@/hooks/use-mobile";
 import runWithAuth from "@/lib/client/run-with-auth";
 import type { PageItem } from "@/lib/server/page-cache";
 import { useToast } from "@/ui/Toast";
@@ -18,6 +20,7 @@ export default function LayoutEditorClientWrapper({
 }) {
   const router = useRouter();
   const toast = useToast();
+  const isMobile = useMobile();
 
   const handleSave = async (blocks: AllBlockConfigs[]) => {
     if (page.contentType !== "BLOCK") {
@@ -53,6 +56,10 @@ export default function LayoutEditorClientWrapper({
   const initialBlocks =
     ((page.config as { blocks?: ResolvedBlock[] })
       ?.blocks as ResolvedBlock[]) || [];
+
+  if (isMobile) {
+    return <LayoutEditorDesktopNotice />;
+  }
 
   return (
     <VisualPageEditor

@@ -247,8 +247,8 @@ export default function PasskeyManager() {
     <>
       <div className="space-y-6">
         {/* 添加通行密钥按钮 */}
-        <div className="flex items-center justify-between pb-4 border-b border-foreground/10">
-          <div>
+        <div className="flex items-center justify-between gap-3 border-b border-foreground/10 pb-4">
+          <div className="min-w-0 flex-1">
             <p className="text-foreground font-medium">管理通行密钥</p>
             <p className="text-sm text-muted-foreground mt-1">
               使用存储于设备上的生物学验证方式来实现无密码登录
@@ -261,6 +261,7 @@ export default function PasskeyManager() {
             variant="secondary"
             size="sm"
             disabled={loading || actionLoading}
+            className="flex-shrink-0"
           />
         </div>
 
@@ -289,14 +290,14 @@ export default function PasskeyManager() {
                   {items.map((item, index) => (
                     <div
                       key={item.credentialId}
-                      className={`flex items-center justify-between py-4 gap-4 ${index !== items.length - 1 ? "border-b border-foreground/10" : ""}`}
+                      className={`flex items-center justify-between gap-4 py-4 ${index !== items.length - 1 ? "border-b border-foreground/10" : ""}`}
                     >
                       <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
                           {getDeviceIcon(item.deviceType)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground truncate">
+                          <p className="font-medium text-foreground break-words sm:truncate">
                             {item.name}
                           </p>
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">

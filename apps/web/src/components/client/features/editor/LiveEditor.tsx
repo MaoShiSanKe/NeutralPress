@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useDeferredValue, useEffect, useRef } from "react";
 import type { editor } from "monaco-editor";
 
 import { LivePreview } from "@/components/client/features/editor/LivePreview";
@@ -24,6 +24,7 @@ export function LiveEditor({
   const monacoContainerRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const deferredPreviewContent = useDeferredValue(content);
 
   const handleEditorReady = (editor: editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
@@ -84,7 +85,7 @@ export function LiveEditor({
 
       {/* 右侧: 实时预览 */}
       <div ref={previewContainerRef} className="w-1/2 h-full">
-        <LivePreview content={content} mode={mode} />
+        <LivePreview content={deferredPreviewContent} mode={mode} />
       </div>
     </div>
   );

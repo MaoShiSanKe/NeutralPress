@@ -145,6 +145,21 @@ export function Tooltip({
     setIsVisible((prev) => !prev);
   };
 
+  const handleHoverPointerEnter = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    // Tooltip 是 hover affordance，触摸设备不应在点击时抢占交互。
+    if (event.pointerType !== "mouse") return;
+    showTooltip();
+  };
+
+  const handleHoverPointerLeave = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (event.pointerType !== "mouse") return;
+    hideTooltip();
+  };
+
   // 更新位置
   useEffect(() => {
     if (isVisible) {
@@ -179,7 +194,7 @@ export function Tooltip({
   useEffect(() => {
     if (trigger !== "click" || !isVisible) return;
 
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: PointerEvent) => {
       if (
         triggerRef.current &&
         !triggerRef.current.contains(event.target as Node) &&
@@ -190,18 +205,17 @@ export function Tooltip({
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("pointerdown", handleClickOutside);
     };
   }, [isVisible, trigger]);
 
   const triggerProps =
     trigger === "hover"
       ? {
-          onMouseEnter: showTooltip,
-          onMouseLeave: hideTooltip,
-          onTouchStart: toggleTooltip, // 移动设备支持
+          onPointerEnter: handleHoverPointerEnter,
+          onPointerLeave: handleHoverPointerLeave,
         }
       : {
           onClick: toggleTooltip,
