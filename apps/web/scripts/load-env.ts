@@ -32,6 +32,21 @@ function loadEnvFromDirectory(dir: string, envFiles: string[]) {
   }
 }
 
+function normalizeEnvValue(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+export function getRuntimeDatabaseUrl(): string | undefined {
+  loadWebEnv();
+  return normalizeEnvValue(process.env.DATABASE_URL);
+}
+
+export function getPrismaDatabaseUrl(): string | undefined {
+  loadWebEnv();
+  return normalizeEnvValue(process.env.DIRECT_URL) ?? getRuntimeDatabaseUrl();
+}
+
 export function loadWebEnv(): void {
   const globalState = globalThis as Record<string, unknown>;
   if (globalState[loadedFlag]) {
@@ -44,6 +59,13 @@ export function loadWebEnv(): void {
   // 优先加载 apps/web 下的 env，再加载仓库根目录作为兜底。
   loadEnvFromDirectory(webRootDir, envFiles);
   loadEnvFromDirectory(repoRootDir, envFiles);
+
+  const databaseUrl = normalizeEnvValue(process.env.DATABASE_URL);
+  const directUrl = normalizeEnvValue(process.env.DIRECT_URL);
+
+  if (!directUrl && databaseUrl) {
+    process.env.DIRECT_URL = databaseUrl;
+  }
 
   globalState[loadedFlag] = true;
 }

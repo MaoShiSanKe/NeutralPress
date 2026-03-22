@@ -465,7 +465,7 @@ export default async function AdminVersionPage() {
           <GridItem areas={[5, 6]} width={6} height={0.2}>
             <AutoTransition type="scale" className="h-full">
               <Link
-                href="https://neutralpress.net/docs"
+                href="https://neutralpress.net/docs/feature/upgrade"
                 className="h-full flex gap-2 items-center justify-center text-2xl hover:bg-primary hover:text-primary-foreground transition-all"
               >
                 <RiBookLine size="1.1em" /> 查看更新指南

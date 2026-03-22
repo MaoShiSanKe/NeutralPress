@@ -4,6 +4,7 @@ import path from "node:path";
 
 import RLog from "rlog-js";
 
+import { getPrismaDatabaseUrl } from "@/../scripts/load-env";
 import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
 
 const rlog = new RLog();
@@ -117,7 +118,7 @@ async function createPrismaClient(): Promise<any> {
   const { PrismaPg } = await import("@prisma/adapter-pg");
 
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: getPrismaDatabaseUrl(),
   });
   const adapter = new PrismaPg(pool);
 

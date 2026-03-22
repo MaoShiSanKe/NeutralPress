@@ -87,6 +87,15 @@ function resolvePrismaSchemaPath(cwd: string): string {
   return schemaPath;
 }
 
+function resolvePrismaConfigPath(cwd: string): string | null {
+  return resolveFirstExistingPath([
+    path.resolve(cwd, "prisma.config.ts"),
+    path.resolve(cwd, ".config", "prisma.ts"),
+    path.resolve(cwd, "apps", "web", "prisma.config.ts"),
+    path.resolve(cwd, "apps", "web", ".config", "prisma.ts"),
+  ]);
+}
+
 function splitLines(value: string): string[] {
   return value
     .split(/\r?\n/g)
@@ -102,21 +111,23 @@ export async function runPrismaMigrateDeploy(options?: {
   const logger = options?.logger;
   const cliPath = resolvePrismaCliPath(cwd);
   const schemaPath = resolvePrismaSchemaPath(cwd);
+  const configPath = resolvePrismaConfigPath(cwd);
+  const cliArgs = [cliPath, "migrate", "deploy", "--schema", schemaPath];
+
+  if (configPath) {
+    cliArgs.push("--config", configPath);
+  }
 
   try {
-    const stdout = execFileSync(
-      process.execPath,
-      [cliPath, "migrate", "deploy", "--schema", schemaPath],
-      {
-        cwd,
-        env: {
-          ...process.env,
-          PRISMA_HIDE_UPDATE_MESSAGE: "1",
-        },
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
+    const stdout = execFileSync(process.execPath, cliArgs, {
+      cwd,
+      env: {
+        ...process.env,
+        PRISMA_HIDE_UPDATE_MESSAGE: "1",
       },
-    );
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
 
     if (logger) {
       for (const line of splitLines(stdout)) {

@@ -68,6 +68,7 @@ import {
 } from "@/components/client/features/editor/TiptapEditor";
 import MediaSelector from "@/components/client/features/media/MediaSelector";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import { useMobile } from "@/hooks/use-mobile";
 import { createArray } from "@/lib/client/create-array";
 import {
   clearEditorContent,
@@ -121,6 +122,7 @@ export function EditorCore({
   onExtraAction: _onExtraAction,
 }: EditorCoreProps) {
   // ==================== 状态管理 ====================
+  const isMobile = useMobile();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [editor, setEditor] = useState<TiptapEditorType | null>(null);
   const [monacoEditor, setMonacoEditor] =
@@ -128,6 +130,7 @@ export function EditorCore({
   const [isTableToolbarVisible, setIsTableToolbarVisible] = useState(false);
   const [showInvisibleChars, setShowInvisibleChars] = useState(false);
   const [showTableOfContents, setShowTableOfContents] = useState(true);
+  const [isMobilePreviewOpen, setIsMobilePreviewOpen] = useState(false);
   const [initialContent, setInitialContent] = useState<string | undefined>(
     content,
   );
@@ -1200,6 +1203,60 @@ export function EditorCore({
     },
   ];
 
+  const supportsMobilePreviewDrawer =
+    isMobile && (editorType === "markdown" || editorType === "mdx");
+
+  useEffect(() => {
+    if (!supportsMobilePreviewDrawer && isMobilePreviewOpen) {
+      setIsMobilePreviewOpen(false);
+    }
+  }, [isMobilePreviewOpen, supportsMobilePreviewDrawer]);
+
+  const toolbarDropdownTriggerClassName =
+    "inline-flex h-8 items-center justify-center gap-0 rounded-md px-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
+
+  const renderToolbarToggle = (
+    key: string,
+    {
+      icon,
+      action,
+      name,
+      isActive,
+      disabled = false,
+    }: {
+      icon: React.ReactNode;
+      action: () => void;
+      name: string;
+      isActive?: boolean;
+      disabled?: boolean;
+    },
+  ) => {
+    const toggle = (
+      <Toggle
+        size="sm"
+        variant="default"
+        pressed={isActive}
+        onClick={action}
+        disabled={disabled}
+        tabIndex={-1}
+        aria-label={name}
+        title={name}
+      >
+        {icon}
+      </Toggle>
+    );
+
+    if (isMobile) {
+      return <div key={key}>{toggle}</div>;
+    }
+
+    return (
+      <Tooltip key={key} content={name}>
+        {toggle}
+      </Tooltip>
+    );
+  };
+
   return (
     <RowGrid
       className={`w-full ${isFullscreen ? "fixed inset-0 z-[9999] bg-background" : "max-h-[100vh]"}`}
@@ -1209,219 +1266,365 @@ export function EditorCore({
       <GridItem
         areas={[1]}
         width={3.2}
-        className="flex items-center justify-center px-4 gap-2 border-b border-foreground/10"
+        mobileAutoHeight
+        className={`border-b border-foreground/10 px-4 ${isMobile ? "py-3" : "flex items-center justify-center"}`}
       >
-        <div className="flex items-center gap-2 w-full justify-center">
-          {/* 撤销/重做按钮 */}
-          <div className="flex gap-1">
-            {toolbarButtons.map((button, index) => (
-              <Tooltip key={index} content={button.name}>
-                <Toggle
-                  size="sm"
-                  variant="default"
-                  onClick={button.action}
-                  tabIndex={-1}
-                >
-                  {button.icon}
-                </Toggle>
-              </Tooltip>
-            ))}
-          </div>
-
-          <div className="w-px h-6 bg-foreground/20" />
-
-          {/* 标题下拉菜单 */}
-          <Dropdown
-            trigger={
-              <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                <RiHeading size="1.2em" />
+        {isMobile ? (
+          <div className="-mx-4 overflow-x-auto px-4 py-1 touch-pan-x">
+            <div className="flex w-max items-center gap-2 pr-4">
+              <div className="flex gap-1">
+                {toolbarButtons.map((button, index) =>
+                  renderToolbarToggle(`history-${index}`, {
+                    icon: button.icon,
+                    action: button.action,
+                    name: button.name,
+                  }),
+                )}
               </div>
-            }
-            options={headingOptions}
-          />
 
-          <div className="w-px h-6 bg-foreground/20" />
+              <div className="h-6 w-px bg-foreground/20" />
 
-          {/* 文本格式化按钮组 */}
-          <div className="flex gap-1">
-            {formattingButtons.map((button, index) => (
-              <Tooltip key={index} content={button.name}>
-                <Toggle
-                  size="sm"
-                  variant="default"
-                  pressed={button.isActive}
-                  onClick={button.action}
-                  tabIndex={-1}
-                >
-                  {button.icon}
-                </Toggle>
-              </Tooltip>
-            ))}
-          </div>
-
-          <div className="w-px h-6 bg-foreground/20" />
-
-          {/* 对齐下拉菜单 */}
-          <Dropdown
-            trigger={
-              <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                <RiAlignLeft size="1.2em" />
-              </div>
-            }
-            options={alignOptions}
-          />
-
-          <div className="w-px h-6 bg-foreground/20" />
-
-          {/* 列表下拉菜单 */}
-          <Dropdown
-            trigger={
-              <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                <RiListUnordered size="1.2em" />
-              </div>
-            }
-            options={listOptions}
-          />
-
-          <div className="w-px h-6 bg-foreground/20" />
-
-          {/* 块级元素按钮 */}
-          <div className="flex gap-1">
-            {blockButtons.map((button, index) => (
-              <Tooltip key={index} content={button.name}>
-                <Toggle
-                  size="sm"
-                  variant="default"
-                  pressed={button.isActive}
-                  onClick={button.action}
-                  tabIndex={-1}
-                >
-                  {button.icon}
-                </Toggle>
-              </Tooltip>
-            ))}
-
-            {/* 插入表格按钮 */}
-            <TableSizePicker
-              onSelect={handleInsertTable}
-              trigger={
-                <Tooltip content="插入表格">
-                  <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                    <RiTable2 size="1.2em" />
+              <Dropdown
+                trigger={
+                  <div
+                    className={toolbarDropdownTriggerClassName}
+                    aria-label="标题层级"
+                    title="标题层级"
+                  >
+                    <RiHeading size="1.2em" />
                   </div>
-                </Tooltip>
-              }
-            />
-          </div>
-
-          <div className="w-px h-6 bg-foreground/20" />
-
-          {/* 插入元素按钮 */}
-          <div className="flex gap-1">
-            {/* 链接按钮 - 使用 Popover */}
-            <Tooltip content="链接">
-              <LinkPopover
-                open={isLinkPopoverOpen}
-                onOpenChange={setIsLinkPopoverOpen}
-                onSubmit={handleLinkSubmit}
-                initialText={
-                  editor?.state.doc.textBetween(
-                    editor?.state.selection.from,
-                    editor?.state.selection.to,
-                    "",
-                  ) || ""
                 }
-                initialUrl={
-                  editor?.isActive("link")
-                    ? editor?.getAttributes("link").href || ""
-                    : ""
-                }
-                isActive={editor?.isActive("link") || false}
+                options={headingOptions}
               />
-            </Tooltip>
 
-            {insertButtons.map((button, index) => (
-              <Tooltip key={index} content={button.name}>
-                <Toggle
-                  size="sm"
-                  variant="default"
-                  pressed={button.isActive}
-                  onClick={button.action}
-                  tabIndex={-1}
-                >
-                  {button.icon}
-                </Toggle>
-              </Tooltip>
-            ))}
+              <div className="h-6 w-px bg-foreground/20" />
+
+              <div className="flex gap-1">
+                {formattingButtons.map((button, index) =>
+                  renderToolbarToggle(`format-${index}`, {
+                    icon: button.icon,
+                    action: button.action,
+                    name: button.name,
+                    isActive: button.isActive,
+                  }),
+                )}
+              </div>
+
+              <div className="h-6 w-px bg-foreground/20" />
+
+              <Dropdown
+                trigger={
+                  <div
+                    className={toolbarDropdownTriggerClassName}
+                    aria-label="文本对齐"
+                    title="文本对齐"
+                  >
+                    <RiAlignLeft size="1.2em" />
+                  </div>
+                }
+                options={alignOptions}
+              />
+
+              <div className="h-6 w-px bg-foreground/20" />
+
+              <Dropdown
+                trigger={
+                  <div
+                    className={toolbarDropdownTriggerClassName}
+                    aria-label="列表"
+                    title="列表"
+                  >
+                    <RiListUnordered size="1.2em" />
+                  </div>
+                }
+                options={listOptions}
+              />
+
+              <div className="h-6 w-px bg-foreground/20" />
+
+              <div className="flex gap-1">
+                {blockButtons.map((button, index) =>
+                  renderToolbarToggle(`block-${index}`, {
+                    icon: button.icon,
+                    action: button.action,
+                    name: button.name,
+                    isActive: button.isActive,
+                  }),
+                )}
+                <TableSizePicker
+                  onSelect={handleInsertTable}
+                  trigger={
+                    <div
+                      className={toolbarDropdownTriggerClassName}
+                      aria-label="插入表格"
+                      title="插入表格"
+                    >
+                      <RiTable2 size="1.2em" />
+                    </div>
+                  }
+                />
+              </div>
+
+              <div className="h-6 w-px bg-foreground/20" />
+
+              <div className="flex gap-1">
+                <LinkPopover
+                  open={isLinkPopoverOpen}
+                  onOpenChange={setIsLinkPopoverOpen}
+                  onSubmit={handleLinkSubmit}
+                  initialText={
+                    editor?.state.doc.textBetween(
+                      editor?.state.selection.from,
+                      editor?.state.selection.to,
+                      "",
+                    ) || ""
+                  }
+                  initialUrl={
+                    editor?.isActive("link")
+                      ? editor?.getAttributes("link").href || ""
+                      : ""
+                  }
+                  isActive={editor?.isActive("link") || false}
+                />
+                {insertButtons.map((button, index) =>
+                  renderToolbarToggle(`insert-${index}`, {
+                    icon: button.icon,
+                    action: button.action,
+                    name: button.name,
+                    isActive: button.isActive,
+                  }),
+                )}
+              </div>
+
+              <div className="h-6 w-px bg-foreground/20" />
+
+              {renderToolbarToggle("view-invisible", {
+                icon: showInvisibleChars ? (
+                  <RiEyeOffLine size="1.2em" />
+                ) : (
+                  <RiEyeLine size="1.2em" />
+                ),
+                action: toggleInvisibleChars,
+                name:
+                  editorType !== "visual"
+                    ? "仅可视化编辑器支持"
+                    : showInvisibleChars
+                      ? "隐藏不可见字符"
+                      : "显示不可见字符",
+                isActive: showInvisibleChars,
+                disabled: editorType !== "visual",
+              })}
+
+              {renderToolbarToggle("view-toc", {
+                icon: <RiMenuLine size="1.2em" />,
+                action: () => setShowTableOfContents(!showTableOfContents),
+                name:
+                  editorType !== "visual"
+                    ? "仅可视化编辑器支持"
+                    : showTableOfContents
+                      ? "隐藏目录"
+                      : "显示目录",
+                isActive: showTableOfContents,
+                disabled: editorType !== "visual",
+              })}
+
+              {renderToolbarToggle("view-fullscreen", {
+                icon: isFullscreen ? (
+                  <RiFullscreenExitLine size="1.2em" />
+                ) : (
+                  <RiFullscreenLine size="1.2em" />
+                ),
+                action: () => {
+                  void toggleFullscreen();
+                },
+                name: isFullscreen ? "退出全屏" : "全屏",
+                isActive: isFullscreen,
+              })}
+            </div>
           </div>
+        ) : (
+          <div className="flex w-full items-center justify-center gap-2">
+            <div className="flex gap-1">
+              {toolbarButtons.map((button, index) =>
+                renderToolbarToggle(`desktop-history-${index}`, {
+                  icon: button.icon,
+                  action: button.action,
+                  name: button.name,
+                }),
+              )}
+            </div>
 
-          <div className="w-px h-6 bg-foreground/20" />
+            <div className="h-6 w-px bg-foreground/20" />
 
-          {/* 不可见字符按钮 */}
-          <Tooltip
-            content={
-              editorType !== "visual"
-                ? "仅可视化编辑器支持"
-                : showInvisibleChars
-                  ? "隐藏不可见字符"
-                  : "显示不可见字符"
-            }
-          >
-            <Toggle
-              size="sm"
-              variant="default"
-              pressed={showInvisibleChars}
-              onClick={toggleInvisibleChars}
-              disabled={editorType !== "visual"}
-              tabIndex={-1}
-            >
-              {showInvisibleChars ? (
+            <Dropdown
+              trigger={
+                <div
+                  className={toolbarDropdownTriggerClassName}
+                  aria-label="标题层级"
+                  title="标题层级"
+                >
+                  <RiHeading size="1.2em" />
+                </div>
+              }
+              options={headingOptions}
+            />
+
+            <div className="h-6 w-px bg-foreground/20" />
+
+            <div className="flex gap-1">
+              {formattingButtons.map((button, index) =>
+                renderToolbarToggle(`desktop-format-${index}`, {
+                  icon: button.icon,
+                  action: button.action,
+                  name: button.name,
+                  isActive: button.isActive,
+                }),
+              )}
+            </div>
+
+            <div className="h-6 w-px bg-foreground/20" />
+
+            <Dropdown
+              trigger={
+                <div
+                  className={toolbarDropdownTriggerClassName}
+                  aria-label="文本对齐"
+                  title="文本对齐"
+                >
+                  <RiAlignLeft size="1.2em" />
+                </div>
+              }
+              options={alignOptions}
+            />
+
+            <div className="h-6 w-px bg-foreground/20" />
+
+            <Dropdown
+              trigger={
+                <div
+                  className={toolbarDropdownTriggerClassName}
+                  aria-label="列表"
+                  title="列表"
+                >
+                  <RiListUnordered size="1.2em" />
+                </div>
+              }
+              options={listOptions}
+            />
+
+            <div className="h-6 w-px bg-foreground/20" />
+
+            <div className="flex gap-1">
+              {blockButtons.map((button, index) =>
+                renderToolbarToggle(`desktop-block-${index}`, {
+                  icon: button.icon,
+                  action: button.action,
+                  name: button.name,
+                  isActive: button.isActive,
+                }),
+              )}
+
+              <TableSizePicker
+                onSelect={handleInsertTable}
+                trigger={
+                  <Tooltip content="插入表格">
+                    <div
+                      className={toolbarDropdownTriggerClassName}
+                      aria-label="插入表格"
+                      title="插入表格"
+                    >
+                      <RiTable2 size="1.2em" />
+                    </div>
+                  </Tooltip>
+                }
+              />
+            </div>
+
+            <div className="h-6 w-px bg-foreground/20" />
+
+            <div className="flex gap-1">
+              <Tooltip content="链接">
+                <LinkPopover
+                  open={isLinkPopoverOpen}
+                  onOpenChange={setIsLinkPopoverOpen}
+                  onSubmit={handleLinkSubmit}
+                  initialText={
+                    editor?.state.doc.textBetween(
+                      editor?.state.selection.from,
+                      editor?.state.selection.to,
+                      "",
+                    ) || ""
+                  }
+                  initialUrl={
+                    editor?.isActive("link")
+                      ? editor?.getAttributes("link").href || ""
+                      : ""
+                  }
+                  isActive={editor?.isActive("link") || false}
+                />
+              </Tooltip>
+
+              {insertButtons.map((button, index) =>
+                renderToolbarToggle(`desktop-insert-${index}`, {
+                  icon: button.icon,
+                  action: button.action,
+                  name: button.name,
+                  isActive: button.isActive,
+                }),
+              )}
+            </div>
+
+            <div className="h-6 w-px bg-foreground/20" />
+
+            {renderToolbarToggle("desktop-view-invisible", {
+              icon: showInvisibleChars ? (
                 <RiEyeOffLine size="1.2em" />
               ) : (
                 <RiEyeLine size="1.2em" />
-              )}
-            </Toggle>
-          </Tooltip>
+              ),
+              action: toggleInvisibleChars,
+              name:
+                editorType !== "visual"
+                  ? "仅可视化编辑器支持"
+                  : showInvisibleChars
+                    ? "隐藏不可见字符"
+                    : "显示不可见字符",
+              isActive: showInvisibleChars,
+              disabled: editorType !== "visual",
+            })}
 
-          {/* 目录切换按钮 */}
-          <Tooltip
-            content={
-              editorType !== "visual"
-                ? "仅可视化编辑器支持"
-                : showTableOfContents
-                  ? "隐藏目录"
-                  : "显示目录"
-            }
-          >
-            <Toggle
-              size="sm"
-              variant="default"
-              pressed={showTableOfContents}
-              onClick={() => setShowTableOfContents(!showTableOfContents)}
-              disabled={editorType !== "visual"}
-              tabIndex={-1}
-            >
-              <RiMenuLine size="1.2em" />
-            </Toggle>
-          </Tooltip>
+            {renderToolbarToggle("desktop-view-toc", {
+              icon: <RiMenuLine size="1.2em" />,
+              action: () => setShowTableOfContents(!showTableOfContents),
+              name:
+                editorType !== "visual"
+                  ? "仅可视化编辑器支持"
+                  : showTableOfContents
+                    ? "隐藏目录"
+                    : "显示目录",
+              isActive: showTableOfContents,
+              disabled: editorType !== "visual",
+            })}
 
-          {/* 全屏按钮 */}
-          <Tooltip content={isFullscreen ? "退出全屏" : "全屏"}>
-            <Toggle
-              size="sm"
-              variant="default"
-              pressed={isFullscreen}
-              onPressedChange={toggleFullscreen}
-              tabIndex={-1}
-            >
-              {isFullscreen ? (
-                <RiFullscreenExitLine size="1.2em" />
-              ) : (
-                <RiFullscreenLine size="1.2em" />
-              )}
-            </Toggle>
-          </Tooltip>
-        </div>
+            <Tooltip content={isFullscreen ? "退出全屏" : "全屏"}>
+              <Toggle
+                size="sm"
+                variant="default"
+                pressed={isFullscreen}
+                onPressedChange={toggleFullscreen}
+                tabIndex={-1}
+                aria-label={isFullscreen ? "退出全屏" : "全屏"}
+                title={isFullscreen ? "退出全屏" : "全屏"}
+              >
+                {isFullscreen ? (
+                  <RiFullscreenExitLine size="1.2em" />
+                ) : (
+                  <RiFullscreenLine size="1.2em" />
+                )}
+              </Toggle>
+            </Tooltip>
+          </div>
+        )}
       </GridItem>
 
       <GridItem
@@ -1504,6 +1707,8 @@ export function EditorCore({
                 }
               }
             }}
+            mobilePreviewOpen={isMobilePreviewOpen}
+            onMobilePreviewOpenChange={setIsMobilePreviewOpen}
           />
         )}
       </GridItem>
@@ -1512,34 +1717,101 @@ export function EditorCore({
         areas={[12]}
         width={3.2}
         height={0.15}
-        className={`flex px-10 items-center justify-between border-t border-foreground/10 ${isFullscreen ? "hidden" : ""}`}
+        mobileAutoHeight
+        className={`border-t border-foreground/10 ${isFullscreen ? "hidden" : ""} ${isMobile ? "px-4 py-3" : "flex items-center justify-between px-10"}`}
       >
-        {/* 左侧：编辑器类型选择 + 字数统计 */}
-        <div className="flex items-center gap-4">
-          <Select
-            value={editorType}
-            onChange={(value) => handleModeSwitch(value as EditorMode)}
-            options={availableModes.map((mode) => ({
-              value: mode,
-              label:
-                mode === "visual"
-                  ? "可视化编辑器"
-                  : mode === "markdown"
-                    ? "Markdown"
-                    : mode === "mdx"
-                      ? "MDX (Beta)"
-                      : "HTML",
-            }))}
-            size="sm"
-          />
-          <div className="text-sm text-foreground/60">
-            {adapterManagerRef.current ? (
-              <span>字符: {adapterManagerRef.current.getContent().length}</span>
-            ) : (
-              <span>字符: 0</span>
-            )}
+        {isMobile ? (
+          <div className="flex w-full flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <Select
+                value={editorType}
+                onChange={(value) => handleModeSwitch(value as EditorMode)}
+                options={availableModes.map((mode) => ({
+                  value: mode,
+                  label:
+                    mode === "visual"
+                      ? "可视化编辑器"
+                      : mode === "markdown"
+                        ? "Markdown"
+                        : mode === "mdx"
+                          ? "MDX (Beta)"
+                          : "HTML",
+                }))}
+                size="sm"
+              />
+              <div className="shrink-0 text-sm text-foreground/60">
+                {adapterManagerRef.current ? (
+                  <span>
+                    字符: {adapterManagerRef.current.getContent().length}
+                  </span>
+                ) : (
+                  <span>字符: 0</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex shrink-0 items-center">
+                {supportsMobilePreviewDrawer && (
+                  <Button
+                    label="预览"
+                    variant="secondary"
+                    size="sm"
+                    icon={<RiEyeLine size="1.1em" />}
+                    onClick={() => setIsMobilePreviewOpen(true)}
+                  />
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2">
+                {statusBarActions.map((action) => (
+                  <Button
+                    key={action.id}
+                    label={action.label}
+                    variant={action.variant}
+                    size="sm"
+                    onClick={action.onClick}
+                    loading={action.loading}
+                    loadingText={action.loadingText}
+                    disabled={action.disabled}
+                    icon={action.icon}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* 左侧：编辑器类型选择 + 字数统计 */}
+            <div className="flex items-center gap-4">
+              <Select
+                value={editorType}
+                onChange={(value) => handleModeSwitch(value as EditorMode)}
+                options={availableModes.map((mode) => ({
+                  value: mode,
+                  label:
+                    mode === "visual"
+                      ? "可视化编辑器"
+                      : mode === "markdown"
+                        ? "Markdown"
+                        : mode === "mdx"
+                          ? "MDX (Beta)"
+                          : "HTML",
+                }))}
+                size="sm"
+              />
+              <div className="text-sm text-foreground/60">
+                {adapterManagerRef.current ? (
+                  <span>
+                    字符: {adapterManagerRef.current.getContent().length}
+                  </span>
+                ) : (
+                  <span>字符: 0</span>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* 图片选择器 */}
         <MediaSelector
@@ -1562,22 +1834,23 @@ export function EditorCore({
           mode={mathDialogMode}
         />
 
-        {/* 右侧：操作按钮 - 由父组件配置 */}
-        <div className="flex gap-2">
-          {statusBarActions.map((action) => (
-            <Button
-              key={action.id}
-              label={action.label}
-              variant={action.variant}
-              size="sm"
-              onClick={action.onClick}
-              loading={action.loading}
-              loadingText={action.loadingText}
-              disabled={action.disabled}
-              icon={action.icon}
-            />
-          ))}
-        </div>
+        {!isMobile && (
+          <div className="flex gap-2">
+            {statusBarActions.map((action) => (
+              <Button
+                key={action.id}
+                label={action.label}
+                variant={action.variant}
+                size="sm"
+                onClick={action.onClick}
+                loading={action.loading}
+                loadingText={action.loadingText}
+                disabled={action.disabled}
+                icon={action.icon}
+              />
+            ))}
+          </div>
+        )}
       </GridItem>
 
       {/* 对话框占位符 - 对话框由父组件处理 */}

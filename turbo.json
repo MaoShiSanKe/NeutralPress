@@ -4,6 +4,7 @@
   "globalEnv": [
     "NODE_ENV",
     "DATABASE_URL",
+    "DIRECT_URL",
     "PG_POOL_MAX",
     "PG_CONNECTION_TIMEOUT_MS",
     "PG_IDLE_TIMEOUT_MS",
@@ -28,6 +29,7 @@
         "NODE_ENV",
         "NEXT_PHASE",
         "DATABASE_URL",
+        "DIRECT_URL",
         "REDIS_URL",
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
@@ -76,6 +78,7 @@
       "env": [
         "NODE_ENV",
         "DATABASE_URL",
+        "DIRECT_URL",
         "REDIS_URL",
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",

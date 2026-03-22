@@ -30,25 +30,37 @@ export default function MessagesModal({
   const router = useRouter();
   const navigate = useNavigateWithTransition();
   const [isOpen, setIsOpen] = useState(true);
+  const [isMobileConversationOpen, setIsMobileConversationOpen] =
+    useState(false);
   const encodedRedirectTarget = encodeURIComponent(redirectTarget);
   const loginHref = `/login?redirect=${encodedRedirectTarget}`;
   const registerHref = `/register?redirect=${encodedRedirectTarget}`;
 
   const handleClose = (targetPath?: string) => {
+    const historySteps = isMobileConversationOpen ? 2 : 1;
+
     // 先关闭 Dialog，播放退出动画
     setIsOpen(false);
     // 等待动画完成后再执行路由跳转（Dialog 的动画时长是 200ms）
     setTimeout(() => {
       if (targetPath) {
-        // 如果有目标路径，先 back 再跳转到目标页面
-        router.back();
+        // 如果有目标路径，先回退关闭弹层，再跳转到目标页面
+        if (historySteps > 1) {
+          window.history.go(-historySteps);
+        } else {
+          router.back();
+        }
         // 再等待一小段时间让 back 完成
         setTimeout(() => {
           navigate(targetPath);
         }, 50);
       } else {
         // 只是关闭模态框
-        router.back();
+        if (historySteps > 1) {
+          window.history.go(-historySteps);
+        } else {
+          router.back();
+        }
       }
     }, 200);
   };
@@ -71,6 +83,7 @@ export default function MessagesModal({
             currentUserId={currentUserId}
             isModal={true}
             onRequestClose={handleClose}
+            onMobileConversationStateChange={setIsMobileConversationOpen}
           />
         </div>
       ) : (

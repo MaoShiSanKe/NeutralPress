@@ -133,6 +133,20 @@ const REQUIRED_ENV_VARS = [
 // 可选的环境变量配置
 const OPTIONAL_ENV_VARS = [
   {
+    name: "DIRECT_URL",
+    description:
+      "Prisma CLI direct database connection string (optional, defaults to DATABASE_URL)",
+    validator: (value: string) => {
+      if (
+        !value.startsWith("postgresql://") &&
+        !value.startsWith("postgres://")
+      ) {
+        return "Must be a PostgreSQL connection string (postgresql:// or postgres://)";
+      }
+      return null;
+    },
+  },
+  {
     name: "ENABLE_API",
     description: "Enable API endpoints (optional, default: true)",
     validator: (value: string) => {
@@ -252,6 +266,9 @@ export async function checkEnvironmentVariables(): Promise<void> {
     rlog.error("  JWT_PRIVATE_KEY=<base64_of_pem_private_key>");
     rlog.error("  JWT_PUBLIC_KEY=<base64_of_pem_public_key>");
     rlog.error("  # Optional variables:");
+    rlog.error(
+      "  DIRECT_URL=postgresql://user:password@host:port/database # 可选，未设置时 Prisma 默认沿用 DATABASE_URL",
+    );
     rlog.error("  ENABLE_API=true");
     rlog.error("  DISABLE_ANALYTICS=false");
     throw new Error("Required environment variables are missing or invalid");

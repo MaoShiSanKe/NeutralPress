@@ -15,8 +15,10 @@ import { useBroadcast } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { isDateString } from "@/lib/shared/date-format";
 import generateGradient from "@/lib/shared/gradient";
+import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
 import { Input } from "@/ui/Input";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { Select, type SelectOption } from "@/ui/Select";
@@ -42,6 +44,7 @@ export default function SettingSheet() {
   const [rawJsonErrors, setRawJsonErrors] = useState<Record<string, string>>(
     {},
   );
+  const [resetTarget, setResetTarget] = useState<SettingConfig | null>(null);
   const toast = useToast();
 
   // 监听分类选择广播
@@ -499,6 +502,70 @@ export default function SettingSheet() {
     setRawJsonValues({});
     setRawJsonErrors({});
     fetchSettings();
+  };
+
+  // 重置单个配置项为初始值（仅更新本地编辑状态，不自动提交）
+  const handleResetSetting = (setting: SettingConfig) => {
+    const initialConfig = defaultConfigs.find((c) => c.key === setting.key);
+    if (!initialConfig) {
+      toast.warning("无法重置", `未找到 ${setting.key} 的初始配置`);
+      return;
+    }
+
+    const initialValue = extractDefaultValue(initialConfig.value);
+    const currentValue = extractDefaultValue(setting.value);
+
+    // JSON 对象保持对象结构，便于字段级编辑与保存
+    if (isJsonObject(initialValue)) {
+      const clonedInitialValue = cloneJsonObject(initialValue);
+      setEditedValues((prev) => {
+        if (
+          JSON.stringify(clonedInitialValue) === JSON.stringify(currentValue)
+        ) {
+          const { [setting.key]: _, ...rest } = prev;
+          return rest;
+        }
+
+        return {
+          ...prev,
+          [setting.key]: clonedInitialValue,
+        };
+      });
+      clearRawJsonState(setting.key);
+      return;
+    }
+
+    const initialDisplayValue = getDefaultValue(setting.key);
+    const currentDisplayValue = getOriginalDisplayValue(setting);
+
+    setEditedValues((prev) => {
+      if (initialDisplayValue === currentDisplayValue) {
+        const { [setting.key]: _, ...rest } = prev;
+        return rest;
+      }
+
+      return {
+        ...prev,
+        [setting.key]: initialDisplayValue,
+      };
+    });
+
+    clearRawJsonState(setting.key);
+  };
+
+  const openResetDialog = (setting: SettingConfig) => {
+    setResetTarget(setting);
+  };
+
+  const closeResetDialog = () => {
+    if (saving || loading) return;
+    setResetTarget(null);
+  };
+
+  const handleConfirmResetSetting = () => {
+    if (!resetTarget) return;
+    handleResetSetting(resetTarget);
+    setResetTarget(null);
   };
 
   // 获取原始显示值（不考虑编辑状态）
@@ -1002,8 +1069,23 @@ export default function SettingSheet() {
                 return (
                   <div key={setting.key} className="space-y-2">
                     <div className="flex flex-col gap-1 mb-2">
-                      <div className="text-lg font-medium text-foreground">
-                        {setting.key}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="text-lg font-medium text-foreground break-all">
+                          {setting.key}
+                        </div>
+                        <Clickable
+                          onClick={() => openResetDialog(setting)}
+                          disabled={saving || loading}
+                          className="ml-auto shrink-0"
+                        >
+                          <div
+                            className="p-1 text-muted-foreground hover:text-error transition-colors"
+                            title="重置为初始值"
+                            aria-label={`重置 ${setting.key}`}
+                          >
+                            <RiRefreshLine size="1.1em" />
+                          </div>
+                        </Clickable>
                       </div>
                       {setting.description && (
                         <div className="text-sm text-muted-foreground">
@@ -1095,6 +1177,22 @@ export default function SettingSheet() {
           )}
         </AutoTransition>
       </GridItem>
+
+      <AlertDialog
+        open={Boolean(resetTarget)}
+        onClose={closeResetDialog}
+        onConfirm={handleConfirmResetSetting}
+        title="确认重置配置项"
+        description={
+          resetTarget
+            ? `确认将 ${resetTarget.key} 重置为初始值吗？\n该操作不会自动提交，仍需点击“保存修改”后才会生效。`
+            : undefined
+        }
+        confirmText="确认重置"
+        cancelText="取消"
+        variant="warning"
+        loading={saving || loading}
+      />
     </>
   );
 }

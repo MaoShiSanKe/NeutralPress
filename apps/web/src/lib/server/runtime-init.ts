@@ -11,7 +11,6 @@ import { seedDefaults } from "@/../scripts/seed-defaults";
 import { syncCloudInstance } from "@/../scripts/sync-cloud-instance";
 import { syncPersistentMedia } from "@/../scripts/sync-persistent-media";
 import { updateDatabase } from "@/../scripts/update-db";
-import prisma from "@/lib/server/prisma";
 import { runPrismaMigrateDeploy } from "@/lib/server/prisma-migrate";
 
 type RuntimeInitState = {
@@ -38,15 +37,14 @@ async function runMigrateDeployForStandalone(): Promise<void> {
 async function runRuntimeInitializationWithInjectedPrisma(): Promise<void> {
   await checkEnvironmentVariables();
   await Promise.all([checkJWTKeyPair(), checkRedisConnection()]);
-  await checkDatabaseHealth({ prisma });
+  await checkDatabaseHealth();
   await updateDatabase({
-    prisma,
     runMigrateDeploy: runMigrateDeployForStandalone,
   });
-  await seedDefaults({ prisma });
-  await syncPersistentMedia({ prisma });
-  await syncCloudInstance({ prisma });
-  await generateViewCountCache({ prisma });
+  await seedDefaults();
+  await syncPersistentMedia();
+  await syncCloudInstance();
+  await generateViewCountCache();
 }
 
 export async function runInternalRuntimeInitialization(): Promise<{

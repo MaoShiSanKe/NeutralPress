@@ -412,7 +412,9 @@ const SingleComment = React.memo(function SingleComment({
                   回复 @{comment.replyTo.authorName}
                 </span>
               )}
-              <span className="text-xs">{formatDateTime(comment.createdAt)}</span>
+              <span className="text-xs">
+                {formatDateTime(comment.createdAt)}
+              </span>
               {statusBadge && (
                 <span className="text-xs text-error">{statusBadge}</span>
               )}

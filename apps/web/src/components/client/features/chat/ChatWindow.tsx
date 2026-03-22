@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { RiDeleteBinLine, RiMoreLine } from "@remixicon/react";
+import { RiArrowLeftLine, RiDeleteBinLine, RiMoreLine } from "@remixicon/react";
 import type {
   Conversation,
   ConversationUser,
@@ -43,6 +43,8 @@ interface ChatWindowProps {
   polledOtherUserLastReadMessageId?: string | null; // 轮询获取的对方已读消息ID
   onSendReadReceipt?: (lastReadMessageId: string) => void; // 发送已读标记回调
   connectionStatus?: ConnectionStatus; // WebSocket 连接状态
+  showBackButton?: boolean;
+  onBack?: () => void;
 }
 
 export default function ChatWindow({
@@ -57,6 +59,8 @@ export default function ChatWindow({
   polledOtherUserLastReadMessageId = null,
   onSendReadReceipt,
   connectionStatus = "fallback",
+  showBackButton = false,
+  onBack,
 }: ChatWindowProps) {
   // 使用现有会话或临时用户信息
   const otherUser = conversation?.otherUser || temporaryTargetUser;
@@ -516,55 +520,71 @@ export default function ChatWindow({
       <div className="flex-shrink-0 px-6 py-4 border-b border-foreground/10 bg-background">
         <div className="flex items-center justify-between">
           {/* 用户信息 */}
-          <AutoTransition type="slide">
-            <div className="flex items-center gap-3" key={otherUser.uid}>
-              <Link href={`/user/${otherUser.uid}`}>
-                <UserAvatar
-                  username={otherUser.nickname || otherUser.username}
-                  avatarUrl={otherUser.avatar}
-                  emailMd5={otherUser.emailMd5}
-                  shape="circle"
-                  className="!block w-10 h-10"
-                />
-              </Link>
-              <div>
-                <h2 className="font-semibold text-foreground">
-                  {otherUser.nickname || otherUser.username}
-                </h2>
-                <p className="text-xs text-muted-foreground flex items-center gap-2">
-                  <span>@{otherUser.username}</span>
-                  <AutoTransition>
-                    {connectionStatus === "connected" &&
-                      conversationId &&
-                      isOtherUserInChatChannel && (
-                        <AutoTransition>
-                          {/* 正在输入提示 */}
-                          {isOtherUserTyping ? (
-                            <div key="inputing">正在输入...</div>
-                          ) : (
-                            <div
-                              className="flex items-center gap-1"
-                              key="online-status"
-                            >
-                              <div className="relative w-3 h-3 flex items-center justify-center">
-                                <span
-                                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-success opacity-75 animate-ping"
-                                  style={{ animationDuration: "2s" }}
-                                />
-                                <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-success" />
+          <div className="flex min-w-0 items-center gap-3">
+            {showBackButton && onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="-ml-2 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-foreground/80 transition-colors duration-200 hover:bg-foreground/5 hover:text-foreground"
+                aria-label="返回会话列表"
+              >
+                <RiArrowLeftLine size="1.2em" />
+              </button>
+            )}
+
+            <AutoTransition type="slide">
+              <div
+                className="flex min-w-0 items-center gap-3"
+                key={otherUser.uid}
+              >
+                <Link href={`/user/${otherUser.uid}`}>
+                  <UserAvatar
+                    username={otherUser.nickname || otherUser.username}
+                    avatarUrl={otherUser.avatar}
+                    emailMd5={otherUser.emailMd5}
+                    shape="circle"
+                    className="!block w-10 h-10"
+                  />
+                </Link>
+                <div className="min-w-0">
+                  <h2 className="truncate font-semibold text-foreground">
+                    {otherUser.nickname || otherUser.username}
+                  </h2>
+                  <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="truncate">@{otherUser.username}</span>
+                    <AutoTransition>
+                      {connectionStatus === "connected" &&
+                        conversationId &&
+                        isOtherUserInChatChannel && (
+                          <AutoTransition>
+                            {/* 正在输入提示 */}
+                            {isOtherUserTyping ? (
+                              <div key="inputing">正在输入...</div>
+                            ) : (
+                              <div
+                                className="flex items-center gap-1"
+                                key="online-status"
+                              >
+                                <div className="relative w-3 h-3 flex items-center justify-center">
+                                  <span
+                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-success opacity-75 animate-ping"
+                                    style={{ animationDuration: "2s" }}
+                                  />
+                                  <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-success" />
+                                </div>
+                                <span className="text-success/90">
+                                  对方在当前会话中
+                                </span>
                               </div>
-                              <span className="text-success/90">
-                                对方在当前会话中
-                              </span>
-                            </div>
-                          )}
-                        </AutoTransition>
-                      )}
-                  </AutoTransition>
-                </p>
+                            )}
+                          </AutoTransition>
+                        )}
+                    </AutoTransition>
+                  </p>
+                </div>
               </div>
-            </div>
-          </AutoTransition>
+            </AutoTransition>
+          </div>
 
           {/* 更多菜单（仅在非临时会话时显示） */}
           {!isTemporaryConversation && (

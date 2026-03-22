@@ -15,7 +15,21 @@ import { useNotification } from "@/components/client/features/notice/Notificatio
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { useMessagePolling } from "@/hooks/use-message-polling";
+import { useMobile } from "@/hooks/use-mobile";
 import { AutoTransition } from "@/ui/AutoTransition";
+
+const MOBILE_CHAT_HISTORY_STATE_KEY = "neutralPressMessagesMobileChat";
+
+function getMobileConversationStateValue(state: unknown): string | null {
+  if (!state || typeof state !== "object") {
+    return null;
+  }
+
+  const value = (state as Record<string, unknown>)[
+    MOBILE_CHAT_HISTORY_STATE_KEY
+  ];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
 
 interface MessagesClientProps {
   initialConversations: Conversation[];
@@ -24,6 +38,7 @@ interface MessagesClientProps {
   currentUserId: number;
   isModal?: boolean;
   onRequestClose?: (targetPath?: string) => void;
+  onMobileConversationStateChange?: (isConversationOpen: boolean) => void;
 }
 
 export default function MessagesClient({
@@ -32,6 +47,7 @@ export default function MessagesClient({
   initialHasMore,
   currentUserId,
   isModal = false,
+  onMobileConversationStateChange,
 }: MessagesClientProps) {
   const [conversations, setConversations] =
     useState<Conversation[]>(initialConversations);
@@ -47,8 +63,11 @@ export default function MessagesClient({
     createdAt: string;
     senderUid: number;
   } | null>(null);
+  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
+  const allConversationsRef = useRef<Conversation[]>(initialConversations);
   const processedUidParamRef = useRef<string | null>(null);
   const [_isLoadingTargetUser, setIsLoadingTargetUser] = useState(false);
+  const isMobile = useMobile();
   const searchParams = useSearchParams();
   const { removeMessageNotificationsByConversation, connectionStatus } =
     useNotification();
@@ -294,6 +313,57 @@ export default function MessagesClient({
     [connectionStatus, selectedConversationId, broadcast],
   );
 
+  const clearConversationSelection = useCallback(() => {
+    if (selectedConversationId?.startsWith("temp-")) {
+      setTemporaryTargetUser(null);
+      setTemporaryLastMessage(null);
+    }
+
+    setSelectedConversationId(null);
+    setMobileView("list");
+  }, [selectedConversationId]);
+
+  const pushMobileConversationHistoryState = useCallback(
+    (conversationId: string) => {
+      if (!isMobile || typeof window === "undefined") {
+        return;
+      }
+
+      if (getMobileConversationStateValue(window.history.state)) {
+        return;
+      }
+
+      const baseState =
+        window.history.state && typeof window.history.state === "object"
+          ? window.history.state
+          : {};
+
+      window.history.pushState(
+        {
+          ...baseState,
+          [MOBILE_CHAT_HISTORY_STATE_KEY]: conversationId,
+        },
+        "",
+        window.location.href,
+      );
+    },
+    [isMobile],
+  );
+
+  const returnToConversationList = useCallback(() => {
+    if (!isMobile || typeof window === "undefined") {
+      clearConversationSelection();
+      return;
+    }
+
+    if (getMobileConversationStateValue(window.history.state)) {
+      window.history.back();
+      return;
+    }
+
+    clearConversationSelection();
+  }, [clearConversationSelection, isMobile]);
+
   // 当选中的会话变化时，订阅/取消订阅 chat 频道并清空消息缓存
   useEffect(() => {
     setCurrentConversationMessages([]);
@@ -345,8 +415,16 @@ export default function MessagesClient({
 
       // 选择会话，不清空临时用户（允许临时会话继续存在于列表中）
       setSelectedConversationId(conversationId);
+      if (isMobile) {
+        setMobileView("chat");
+        pushMobileConversationHistoryState(conversationId);
+      }
     },
-    [removeMessageNotificationsByConversation],
+    [
+      isMobile,
+      pushMobileConversationHistoryState,
+      removeMessageNotificationsByConversation,
+    ],
   );
 
   // 处理 URL 中的 conversation 参数，自动打开指定会话
@@ -358,12 +436,12 @@ export default function MessagesClient({
         (conv) => conv.conversationId === conversationId,
       );
       if (conversation && selectedConversationId !== conversationId) {
-        handleSelectConversation(conversationId);
-
         // 清除 URL 中的 conversation 参数，避免重复触发
         const url = new URL(window.location.href);
         url.searchParams.delete("conversation");
-        window.history.replaceState({}, "", url.toString());
+        window.history.replaceState(window.history.state, "", url.toString());
+
+        handleSelectConversation(conversationId);
       }
     }
   }, [
@@ -401,7 +479,12 @@ export default function MessagesClient({
             // 设置临时用户并选中临时会话
             setTemporaryTargetUser(user);
             setTemporaryLastMessage(null);
-            setSelectedConversationId(`temp-${user.uid}`);
+            const temporaryConversationId = `temp-${user.uid}`;
+            setSelectedConversationId(temporaryConversationId);
+            if (isMobile) {
+              setMobileView("chat");
+              pushMobileConversationHistoryState(temporaryConversationId);
+            }
           }
         }
       } catch (error) {
@@ -410,7 +493,12 @@ export default function MessagesClient({
         setIsLoadingTargetUser(false);
       }
     },
-    [conversations, handleSelectConversation],
+    [
+      conversations,
+      handleSelectConversation,
+      isMobile,
+      pushMobileConversationHistoryState,
+    ],
   );
 
   // 处理 URL 中的 uid 参数，自动打开已有会话或创建临时会话
@@ -439,16 +527,16 @@ export default function MessagesClient({
     ) {
       const url = new URL(window.location.href);
       url.searchParams.delete("uid");
-      window.history.replaceState({}, "", url.toString());
+      window.history.replaceState(window.history.state, "", url.toString());
       return;
     }
-
-    void handleNewConversation(parsedUid);
 
     // 清除 URL 中的 uid 参数，避免重复触发
     const url = new URL(window.location.href);
     url.searchParams.delete("uid");
-    window.history.replaceState({}, "", url.toString());
+    window.history.replaceState(window.history.state, "", url.toString());
+
+    void handleNewConversation(parsedUid);
   }, [searchParams, currentUserId, handleNewConversation]);
 
   // 处理会话删除
@@ -461,10 +549,14 @@ export default function MessagesClient({
 
       // 如果删除的是当前选中的会话，清空选择
       if (selectedConversationId === conversationId) {
-        setSelectedConversationId(null);
+        if (isMobile) {
+          returnToConversationList();
+        } else {
+          setSelectedConversationId(null);
+        }
       }
     },
-    [selectedConversationId],
+    [isMobile, returnToConversationList, selectedConversationId],
   );
 
   // 处理消息发送成功（立即更新会话列表）
@@ -565,10 +657,42 @@ export default function MessagesClient({
         ...conversations,
       ]
     : conversations;
+  allConversationsRef.current = allConversations;
+
+  useEffect(() => {
+    if (!isMobile || typeof window === "undefined") {
+      return;
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      const nextConversationId = getMobileConversationStateValue(event.state);
+
+      if (nextConversationId) {
+        setMobileView("chat");
+
+        const matchedConversation = allConversationsRef.current.find(
+          (conversation) => conversation.conversationId === nextConversationId,
+        );
+        if (matchedConversation) {
+          setSelectedConversationId(nextConversationId);
+        }
+        return;
+      }
+
+      clearConversationSelection();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [clearConversationSelection, isMobile]);
 
   // 判断是否显示聊天窗口
   // 如果 selectedConversationId 存在（无论是临时会话还是正式会话），就显示聊天窗口
   const shouldShowChatWindow = !!selectedConversationId;
+  const isMobileConversationOpen =
+    isMobile && mobileView === "chat" && shouldShowChatWindow;
+  const shouldShowConversationList = !isMobile || !isMobileConversationOpen;
+  const shouldRenderChatPane = !isMobile || isMobileConversationOpen;
 
   // 确定要显示的会话：优先使用 selectedConversation，如果是临时会话则使用 null
   const conversationToShow = selectedConversationId?.startsWith("temp-")
@@ -584,56 +708,76 @@ export default function MessagesClient({
   const effectiveOtherUserLastReadMessageId =
     wsOtherUserLastReadMessageId || polledOtherUserLastReadMessageId;
 
+  useEffect(() => {
+    onMobileConversationStateChange?.(isMobileConversationOpen);
+  }, [isMobileConversationOpen, onMobileConversationStateChange]);
+
   return (
-    <div className="flex h-full bg-background">
+    <div className="flex h-full overflow-hidden bg-background">
       {/* 左侧：会话列表 */}
-      <div
-        className={`flex-shrink-0 border-r border-foreground/10 bg-background ${
-          isModal ? "w-80" : "w-96"
-        }`}
-      >
-        <ConversationList
-          conversations={allConversations}
-          selectedConversationId={selectedConversationId}
-          currentUserId={currentUserId}
-          hasMore={hasMore}
-          total={total}
-          onSelectConversation={handleSelectConversation}
-          onDeleteConversation={handleDeleteConversation}
-          onLoadMore={handleLoadMore}
-          isModal={isModal}
-          onNewConversation={handleNewConversation}
-        />
-      </div>
+      {shouldShowConversationList && (
+        <div
+          className={
+            isMobile
+              ? "min-w-0 flex-1 bg-background"
+              : `flex-shrink-0 border-r border-foreground/10 bg-background ${
+                  isModal ? "w-80" : "w-96"
+                }`
+          }
+        >
+          <ConversationList
+            conversations={allConversations}
+            selectedConversationId={selectedConversationId}
+            currentUserId={currentUserId}
+            hasMore={hasMore}
+            total={total}
+            onSelectConversation={handleSelectConversation}
+            onDeleteConversation={handleDeleteConversation}
+            onLoadMore={handleLoadMore}
+            isModal={isModal}
+            onNewConversation={handleNewConversation}
+          />
+        </div>
+      )}
 
       {/* 右侧：聊天窗口 */}
-      <AutoTransition className="flex-1 flex flex-col">
-        {shouldShowChatWindow ? (
-          <ChatWindow
-            conversationKey={selectedConversationId || "unknown"}
-            conversation={conversationToShow}
-            temporaryTargetUser={temporaryUserToShow}
-            currentUserId={currentUserId}
-            onDeleteConversation={handleDeleteConversation}
-            onConversationCreated={handleConversationCreated}
-            onMessageSent={handleMessageSent}
-            polledMessages={currentConversationMessages}
-            polledOtherUserLastReadMessageId={
-              effectiveOtherUserLastReadMessageId
-            }
-            onSendReadReceipt={handleSendReadReceipt}
-            connectionStatus={connectionStatus}
-          />
-        ) : (
-          <div
-            className="flex-1 flex flex-col items-center justify-center text-muted-foreground"
-            key="empty-state"
-          >
-            <RiQuestionAnswerLine size="4em" className="mb-4" />
-            <p className="text-lg">选择一个会话来开始聊天</p>
-          </div>
-        )}
-      </AutoTransition>
+      {shouldRenderChatPane && (
+        <AutoTransition
+          className={
+            isMobile
+              ? "flex h-full w-full min-w-0 flex-col bg-background"
+              : "flex min-w-0 flex-1 flex-col"
+          }
+        >
+          {shouldShowChatWindow ? (
+            <ChatWindow
+              conversationKey={selectedConversationId || "unknown"}
+              conversation={conversationToShow}
+              temporaryTargetUser={temporaryUserToShow}
+              currentUserId={currentUserId}
+              onDeleteConversation={handleDeleteConversation}
+              onConversationCreated={handleConversationCreated}
+              onMessageSent={handleMessageSent}
+              polledMessages={currentConversationMessages}
+              polledOtherUserLastReadMessageId={
+                effectiveOtherUserLastReadMessageId
+              }
+              onSendReadReceipt={handleSendReadReceipt}
+              connectionStatus={connectionStatus}
+              showBackButton={isMobileConversationOpen}
+              onBack={returnToConversationList}
+            />
+          ) : (
+            <div
+              className="flex flex-1 flex-col items-center justify-center text-muted-foreground"
+              key="empty-state"
+            >
+              <RiQuestionAnswerLine size="4em" className="mb-4" />
+              <p className="text-lg">选择一个会话来开始聊天</p>
+            </div>
+          )}
+        </AutoTransition>
+      )}
     </div>
   );
 }

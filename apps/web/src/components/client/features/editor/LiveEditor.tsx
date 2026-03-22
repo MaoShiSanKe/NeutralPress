@@ -5,6 +5,8 @@ import type { editor } from "monaco-editor";
 
 import { LivePreview } from "@/components/client/features/editor/LivePreview";
 import { MonacoEditor } from "@/components/client/features/editor/MonacoEditor";
+import { useMobile } from "@/hooks/use-mobile";
+import { Drawer } from "@/ui/Drawer";
 
 export interface LiveEditorProps {
   content: string;
@@ -12,6 +14,8 @@ export interface LiveEditorProps {
   mode: "markdown" | "mdx" | "html";
   className?: string;
   onEditorReady?: (editor: editor.IStandaloneCodeEditor) => void;
+  mobilePreviewOpen?: boolean;
+  onMobilePreviewOpenChange?: (open: boolean) => void;
 }
 
 export function LiveEditor({
@@ -20,11 +24,15 @@ export function LiveEditor({
   mode,
   className = "",
   onEditorReady,
+  mobilePreviewOpen = false,
+  onMobilePreviewOpenChange,
 }: LiveEditorProps) {
+  const isMobile = useMobile();
   const monacoContainerRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const deferredPreviewContent = useDeferredValue(content);
+  const useDrawerPreview = isMobile && (mode === "markdown" || mode === "mdx");
 
   const handleEditorReady = (editor: editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
@@ -61,14 +69,62 @@ export function LiveEditor({
     return () => {
       disposable.dispose();
     };
-  }, [mode]);
+  }, [mode, useDrawerPreview]);
+
+  if (useDrawerPreview) {
+    return (
+      <>
+        <div className={`h-full w-full ${className}`}>
+          <div
+            ref={monacoContainerRef}
+            className="h-full w-full"
+            onClick={() => {
+              editorRef.current?.focus();
+            }}
+          >
+            <MonacoEditor
+              value={content}
+              onChange={onChange}
+              language={mode}
+              onEditorReady={handleEditorReady}
+              className="h-full"
+            />
+          </div>
+        </div>
+
+        <Drawer
+          open={mobilePreviewOpen}
+          onClose={() => onMobilePreviewOpenChange?.(false)}
+          initialSize={0.72}
+        >
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-sm font-medium tracking-[0.18em] text-foreground/50">
+                预览
+              </div>
+            </div>
+            <div
+              ref={previewContainerRef}
+              className="min-h-0 flex-1 overflow-hidden rounded-xl border border-foreground/10 bg-background"
+            >
+              <LivePreview
+                content={deferredPreviewContent}
+                mode={mode}
+                className="h-full"
+              />
+            </div>
+          </div>
+        </Drawer>
+      </>
+    );
+  }
 
   return (
     <div className={`flex h-full w-full ${className}`}>
       {/* 左侧: Monaco 编辑器 */}
       <div
         ref={monacoContainerRef}
-        className="w-1/2 h-full border-r border-foreground/10"
+        className="h-full w-1/2 border-r border-foreground/10"
         onClick={() => {
           // 点击时确保编辑器获得焦点
           editorRef.current?.focus();
@@ -84,7 +140,7 @@ export function LiveEditor({
       </div>
 
       {/* 右侧: 实时预览 */}
-      <div ref={previewContainerRef} className="w-1/2 h-full">
+      <div ref={previewContainerRef} className="h-full w-1/2">
         <LivePreview content={deferredPreviewContent} mode={mode} />
       </div>
     </div>

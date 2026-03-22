@@ -7,6 +7,7 @@
 import { Redis } from "ioredis";
 import RLog from "rlog-js";
 
+import { getPrismaDatabaseUrl } from "@/../scripts/load-env";
 import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
 
 import { parseRedisConnectionOptions } from "../src/lib/shared/redis-url";
@@ -38,7 +39,7 @@ export default async function generateViewCountCache(options?: {
 
         // 使用与生产环境相同的 adapter 模式
         pool = new Pool({
-          connectionString: process.env.DATABASE_URL,
+          connectionString: getPrismaDatabaseUrl(),
         });
         const adapter = new PrismaPg(pool);
 

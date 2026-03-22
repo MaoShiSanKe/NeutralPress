@@ -5,7 +5,7 @@ import { execSync } from "child_process";
 import Rlog from "rlog-js";
 import { pathToFileURL } from "url";
 
-import { loadWebEnv } from "@/../scripts/load-env";
+import { getPrismaDatabaseUrl, loadWebEnv } from "@/../scripts/load-env";
 import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,14 +63,16 @@ async function main() {
 
 // 检查环境变量
 async function checkEnvironment() {
-  const dbConnectionString = process.env.DATABASE_URL;
+  const dbConnectionString = getPrismaDatabaseUrl();
   if (!dbConnectionString) {
-    rlog.error("  DATABASE_URL environment variable is not set");
+    rlog.error("  DATABASE_URL / DIRECT_URL environment variable is not set");
     rlog.error("  Please set DATABASE_URL in your .env file");
     rlog.error(
       "  Example: DATABASE_URL=postgresql://user:password@localhost:5432/database",
     );
-    throw new Error("DATABASE_URL environment variable is not set");
+    throw new Error(
+      "DATABASE_URL / DIRECT_URL environment variable is not set",
+    );
   }
 
   // 验证连接字符串格式
@@ -79,7 +81,7 @@ async function checkEnvironment() {
     !dbConnectionString.startsWith("postgres://")
   ) {
     rlog.error(
-      "  DATABASE_URL doesn't appear to be a PostgreSQL connection string",
+      "  DATABASE_URL / DIRECT_URL doesn't appear to be a PostgreSQL connection string",
     );
     rlog.error(`  Current value: ${dbConnectionString}`);
     rlog.error(
@@ -118,7 +120,7 @@ async function initializePrismaClient() {
 
     // 使用与生产环境相同的 adapter 模式
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: getPrismaDatabaseUrl(),
     });
     const adapter = new PrismaPg(pool);
 

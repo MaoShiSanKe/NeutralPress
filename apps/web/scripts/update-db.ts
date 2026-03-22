@@ -7,7 +7,7 @@ import path from "path";
 import Rlog from "rlog-js";
 import { pathToFileURL } from "url";
 
-import { loadWebEnv } from "@/../scripts/load-env";
+import { getPrismaDatabaseUrl, loadWebEnv } from "@/../scripts/load-env";
 import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,7 +80,7 @@ async function initializePrismaClient() {
 
     // 使用与生产环境相同的 adapter 模式
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: getPrismaDatabaseUrl(),
     });
     const adapter = new PrismaPg(pool);
 

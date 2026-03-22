@@ -6,5 +6,8 @@ import crypto from "crypto";
  * @returns 十六进制 MD5 哈希字符串
  */
 export function calculateMD5(text: string): string {
-  return crypto.createHash("md5").update(text.toLowerCase().trim()).digest("hex");
+  return crypto
+    .createHash("md5")
+    .update(text.toLowerCase().trim())
+    .digest("hex");
 }
