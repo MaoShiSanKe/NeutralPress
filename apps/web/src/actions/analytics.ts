@@ -368,6 +368,16 @@ export async function trackPageView(
   try {
     const { path, referer, visitorId, screenSize, language, timezone } = params;
 
+    // 去重检查：同一访客 + 同一路径在 5 秒内只记录一次
+    const dedupKey = `np:analytics:dedup:${visitorId}:${path}`;
+    const isDuplicate = await withRetry(() =>
+      redis.set(dedupKey, "1", "PX", 5000, "NX"),
+    );
+    if (isDuplicate !== "OK") {
+      // 重复请求，静默返回成功
+      return response.ok({ message: "追踪成功" });
+    }
+
     // 解析地理位置
     const location = resolveIpLocation(ipAddress);
 
