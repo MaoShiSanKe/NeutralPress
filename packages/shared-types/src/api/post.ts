@@ -21,6 +21,22 @@ export const PostLicenseSelectionSchema = z.union([
 export type PostLicenseSelection = z.infer<typeof PostLicenseSelectionSchema>;
 registerSchema("PostLicenseSelection", PostLicenseSelectionSchema);
 
+export const PostRoleSchema = z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"]);
+export type PostRole = z.infer<typeof PostRoleSchema>;
+registerSchema("PostRole", PostRoleSchema);
+
+export const PostAccessModeSchema = z.enum(["PUBLIC", "ROLE", "PASSWORD"]);
+export type PostAccessMode = z.infer<typeof PostAccessModeSchema>;
+registerSchema("PostAccessMode", PostAccessModeSchema);
+
+export const PostTocItemSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  level: z.number().int().positive(),
+});
+export type PostTocItem = z.infer<typeof PostTocItemSchema>;
+registerSchema("PostTocItem", PostTocItemSchema);
+
 /*
     getPostsTrends() Schema
 */
@@ -91,6 +107,9 @@ export const PostListItemSchema = z.object({
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
   isPinned: z.boolean(),
   allowComments: z.boolean(),
+  accessMode: PostAccessModeSchema,
+  minRole: PostRoleSchema.nullable(),
+  accessPasswords: z.array(z.string()),
   publishedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -164,6 +183,9 @@ export const PostDetailSchema = z.object({
   metaKeywords: z.string().nullable(),
   robotsIndex: z.boolean(),
   postMode: z.enum(["MARKDOWN", "MDX"]),
+  accessMode: PostAccessModeSchema,
+  minRole: PostRoleSchema.nullable(),
+  accessPasswords: z.array(z.string()),
 });
 export type PostDetail = z.infer<typeof PostDetailSchema>;
 
@@ -176,6 +198,31 @@ registerSchema(
   "GetPostDetailSuccessResponse",
   GetPostDetailSuccessResponseSchema,
 );
+
+export const ProtectedPostContentSchema = z.object({
+  content: z.string(),
+  postMode: z.enum(["MARKDOWN", "MDX"]),
+  allowComments: z.boolean(),
+  tocItems: z.array(PostTocItemSchema),
+});
+export type ProtectedPostContent = z.infer<typeof ProtectedPostContentSchema>;
+registerSchema("ProtectedPostContent", ProtectedPostContentSchema);
+
+export const UnlockProtectedPostSchema = z.object({
+  slug: z.string().min(1, "slug 不能为空"),
+  passphrase: z.string().min(1, "口令不能为空").max(255, "口令过长"),
+  captcha_token: z.string().min(1, "captcha_token 不能为空"),
+});
+export type UnlockProtectedPost = z.infer<typeof UnlockProtectedPostSchema>;
+registerSchema("UnlockProtectedPost", UnlockProtectedPostSchema);
+
+export const GetProtectedPostContentSchema = z.object({
+  slug: z.string().min(1, "slug 不能为空"),
+});
+export type GetProtectedPostContent = z.infer<
+  typeof GetProtectedPostContentSchema
+>;
+registerSchema("GetProtectedPostContent", GetProtectedPostContentSchema);
 
 /*
     updatePosts() Schema
@@ -235,6 +282,9 @@ export const CreatePostSchema = z.object({
   tags: z.array(z.string()).optional(), // 标签名称数组
   commitMessage: z.string().optional(), // 版本提交信息（可选）
   postMode: z.enum(["MARKDOWN", "MDX"]).default("MARKDOWN"), // 编辑器模式
+  accessMode: PostAccessModeSchema.default("PUBLIC"),
+  minRole: PostRoleSchema.optional().nullable(),
+  accessPasswords: z.array(z.string().max(255, "口令过长")).optional(),
 });
 export type CreatePost = z.infer<typeof CreatePostSchema>;
 registerSchema("CreatePost", CreatePostSchema);
@@ -276,6 +326,9 @@ export const UpdatePostSchema = z.object({
   tags: z.array(z.string()).optional(), // 标签名称数组
   commitMessage: z.string().optional(), // 版本提交信息（可选）
   postMode: z.enum(["MARKDOWN", "MDX"]).optional(), // 编辑器模式
+  accessMode: PostAccessModeSchema.optional(),
+  minRole: PostRoleSchema.optional().nullable(),
+  accessPasswords: z.array(z.string().max(255, "口令过长")).optional(),
 });
 export type UpdatePost = z.infer<typeof UpdatePostSchema>;
 registerSchema("UpdatePost", UpdatePostSchema);

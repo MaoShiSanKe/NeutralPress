@@ -6,6 +6,7 @@ import {
   getFeaturedImageUrl,
   mediaRefsInclude,
 } from "@/lib/server/media-reference";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 import type { ProcessedImageData } from "@/lib/shared/image-common";
 import { processImageUrl } from "@/lib/shared/image-common";
@@ -92,8 +93,7 @@ async function fetchGalleryData(
   // 此时 origin 为 "latestPosts" 或 undefined
   const posts = await prisma.post.findMany({
     where: {
-      status: "PUBLISHED",
-      deletedAt: null,
+      ...LISTABLE_POST_PUBLISHED_WHERE,
       mediaRefs: {
         some: { slot: MEDIA_SLOTS.POST_FEATURED_IMAGE },
       },

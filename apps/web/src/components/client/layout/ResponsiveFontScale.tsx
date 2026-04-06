@@ -4,12 +4,17 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 
 import { useMobile } from "@/hooks/use-mobile";
+import {
+  DEFAULT_SITE_FONT_SCALE_PERCENT,
+  siteFontScalePercentToMultiplier,
+} from "@/lib/shared/font-scale";
 
 interface ResponsiveFontScaleProps {
   children: ReactNode;
   scaleFactor?: number; // 缩放因子，基于视窗高度的比例
   mobileScaleFactor?: number; // 移动端缩放因子，基于容器宽度的比例
   baseSize?: number; // 基础字体大小（px）
+  fontScalePercent?: number; // 全站字体缩放百分比
   className?: string;
   useContainerHeight?: boolean; // 是否使用容器高度作为基准（桌面端）
 }
@@ -19,12 +24,15 @@ export default function ResponsiveFontScale({
   scaleFactor = 0.2, // 默认为视窗高度的20%
   mobileScaleFactor = 0.025, // 默认为容器宽度的2.5%
   baseSize = 16, // 默认16px基础大小
+  fontScalePercent = DEFAULT_SITE_FONT_SCALE_PERCENT,
   className = "",
   useContainerHeight = false,
 }: ResponsiveFontScaleProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const originalFontSizeRef = useRef<string>("");
   const isMobile = useMobile();
+  const fontScaleMultiplier =
+    siteFontScalePercentToMultiplier(fontScalePercent);
 
   useEffect(() => {
     // 确保只在客户端运行
@@ -40,6 +48,14 @@ export default function ResponsiveFontScale({
     const updateRootFontSize = () => {
       if (!containerRef.current) return;
 
+      const applyRootFontSize = (responsiveSize: number) => {
+        const scaledSize = responsiveSize * fontScaleMultiplier;
+
+        if (!Number.isFinite(scaledSize) || scaledSize <= 0) return;
+
+        document.documentElement.style.fontSize = `${scaledSize}px`;
+      };
+
       if (isMobile) {
         // 移动端：根据容器宽度动态计算字体大小
         const containerWidth = containerRef.current.offsetWidth;
@@ -49,7 +65,7 @@ export default function ResponsiveFontScale({
           baseSize,
           containerWidth * mobileScaleFactor,
         );
-        document.documentElement.style.fontSize = `${calculatedSize}px`;
+        applyRootFontSize(calculatedSize);
       } else {
         // 桌面端：使用视口高度或容器高度计算字体大小
         const referenceHeight = useContainerHeight
@@ -62,7 +78,7 @@ export default function ResponsiveFontScale({
           baseSize,
           referenceHeight * scaleFactor,
         );
-        document.documentElement.style.fontSize = `${calculatedSize}px`;
+        applyRootFontSize(calculatedSize);
       }
     };
 
@@ -87,7 +103,14 @@ export default function ResponsiveFontScale({
         document.documentElement.style.fontSize = originalFontSizeRef.current;
       }
     };
-  }, [scaleFactor, mobileScaleFactor, baseSize, isMobile, useContainerHeight]);
+  }, [
+    scaleFactor,
+    mobileScaleFactor,
+    baseSize,
+    fontScaleMultiplier,
+    isMobile,
+    useContainerHeight,
+  ]);
 
   return (
     <div ref={containerRef} className={className}>

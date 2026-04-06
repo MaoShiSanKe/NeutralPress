@@ -5,12 +5,13 @@ import type {
 } from "@/blocks/collection/Accordion/types";
 import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import {
-  countCategoryPosts,
+  countPublicCategoryPosts,
   findCategoryByPath,
   getAllDescendantIds,
 } from "@/lib/server/category-utils";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 import { processImageUrl } from "@/lib/shared/image-common";
 
@@ -68,9 +69,7 @@ async function fetchTags(
   const allTags = await prisma.tag.findMany({
     where: {
       posts: {
-        some: {
-          deletedAt: null,
-        },
+        some: LISTABLE_POST_PUBLISHED_WHERE,
       },
     },
     select: {
@@ -93,9 +92,7 @@ async function fetchTags(
       _count: {
         select: {
           posts: {
-            where: {
-              deletedAt: null,
-            },
+            where: LISTABLE_POST_PUBLISHED_WHERE,
           },
           project: {
             where: {
@@ -176,7 +173,7 @@ async function fetchCategories(
 
   // 并发获取：每个分类的文章数和项目数（使用物化路径递归统计）
   const [postCounts, projectCounts] = await Promise.all([
-    Promise.all(rootCategories.map((cat) => countCategoryPosts(cat.id))),
+    Promise.all(rootCategories.map((cat) => countPublicCategoryPosts(cat.id))),
     Promise.all(rootCategories.map((cat) => countCategoryProjects(cat.id))),
   ]);
 
@@ -332,7 +329,7 @@ async function fetchChildCategories(
 
   // 并发获取：每个分类的文章数和项目数
   const [postCounts, projectCounts] = await Promise.all([
-    Promise.all(childCategories.map((cat) => countCategoryPosts(cat.id))),
+    Promise.all(childCategories.map((cat) => countPublicCategoryPosts(cat.id))),
     Promise.all(childCategories.map((cat) => countCategoryProjects(cat.id))),
   ]);
 

@@ -25,6 +25,14 @@ import {
 import { createTag } from "@/actions/tag";
 import { CategoryInput } from "@/components/client/features/categories/CategoryInput";
 import MediaSelector from "@/components/client/features/media/MediaSelector";
+import {
+  hasPostAccessFormChanged,
+  normalizePasswordLines,
+  normalizePostAccessForm,
+  PostAccessControlFields,
+  type PostAccessFormValue,
+  validatePostAccessForm,
+} from "@/components/client/features/posts/PostAccessControlFields";
 import PostLicensePicker from "@/components/client/features/posts/PostLicensePicker";
 import type { SelectedTag } from "@/components/client/features/tags/TagInput";
 import { TagInput } from "@/components/client/features/tags/TagInput";
@@ -45,6 +53,24 @@ import type { SelectOption } from "@/ui/Select";
 import { Select } from "@/ui/Select";
 import type { TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
+
+interface PostQuickEditFormData extends PostAccessFormValue {
+  title: string;
+  slug: string;
+  excerpt: string;
+  status: string;
+  isPinned: boolean;
+  allowComments: boolean;
+  robotsIndex: boolean;
+  accessPasswordText: string;
+  metaDescription: string;
+  metaKeywords: string;
+  featuredImage: string;
+  license: PostLicenseSelection;
+  postMode: "MARKDOWN" | "MDX";
+  tags: SelectedTag[];
+  category: string | null;
+}
 
 export default function PostsTable() {
   const toast = useToast();
@@ -91,13 +117,17 @@ export default function PostsTable() {
   }, []);
 
   // 编辑文章状态
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PostQuickEditFormData>({
     title: "",
     slug: "",
     excerpt: "",
     status: "PUBLISHED",
     isPinned: false,
     allowComments: true,
+    accessMode: "PUBLIC",
+    minRole: null,
+    accessPasswords: [],
+    accessPasswordText: "",
     robotsIndex: true,
     metaDescription: "",
     metaKeywords: "",
@@ -124,6 +154,10 @@ export default function PostsTable() {
       status: post.status,
       isPinned: post.isPinned,
       allowComments: post.allowComments,
+      accessMode: post.accessMode,
+      minRole: post.minRole,
+      accessPasswords: post.accessPasswords,
+      accessPasswordText: post.accessPasswords.join("\n"),
       robotsIndex: post.robotsIndex,
       metaDescription: post.metaDescription || "",
       metaKeywords: post.metaKeywords || "",
@@ -159,9 +193,28 @@ export default function PostsTable() {
     }));
   };
 
+  const toPostAccessFormValue = (
+    value: PostQuickEditFormData,
+  ): PostAccessFormValue => ({
+    accessMode: value.accessMode,
+    minRole: value.minRole,
+    accessPasswords:
+      value.accessMode === "PASSWORD"
+        ? normalizePasswordLines(value.accessPasswordText)
+        : value.accessPasswords,
+  });
+
   // 保存文章编辑
   const handleSavePost = async () => {
     if (!editingPost) return;
+
+    const accessValidationMessage = validatePostAccessForm(
+      toPostAccessFormValue(formData),
+    );
+    if (accessValidationMessage) {
+      toast.error(accessValidationMessage);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -200,6 +253,11 @@ export default function PostsTable() {
         (currentCategories.length === 0 && newCategory !== null) ||
         (currentCategories.length > 0 && newCategory !== currentCategories[0]);
 
+      const accessChanged = hasPostAccessFormChanged(
+        editingPost,
+        toPostAccessFormValue(formData),
+      );
+
       // 检查其他字段是否有变化
       const hasChanges =
         formData.title !== editingPost.title ||
@@ -214,6 +272,7 @@ export default function PostsTable() {
         formData.robotsIndex !== editingPost.robotsIndex ||
         formData.license !== fromStoredPostLicense(editingPost.license) ||
         formData.postMode !== editingPost.postMode ||
+        accessChanged ||
         tagsChanged ||
         categoriesChanged;
 
@@ -224,6 +283,9 @@ export default function PostsTable() {
       }
 
       const accessToken = localStorage.getItem("access_token");
+      const normalizedAccess = normalizePostAccessForm(
+        toPostAccessFormValue(formData),
+      );
 
       // 使用 updatePost 而不是 updatePosts
       const result = await updatePost({
@@ -248,6 +310,11 @@ export default function PostsTable() {
           formData.allowComments !== editingPost.allowComments
             ? formData.allowComments
             : undefined,
+        accessMode: accessChanged ? normalizedAccess.accessMode : undefined,
+        minRole: accessChanged ? normalizedAccess.minRole : undefined,
+        accessPasswords: accessChanged
+          ? normalizedAccess.accessPasswords
+          : undefined,
         featuredImage:
           formData.featuredImage !== (editingPost.featuredImage || "")
             ? formData.featuredImage
@@ -1176,6 +1243,28 @@ export default function PostsTable() {
                 />
               </div>
             </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              访问控制
+            </h3>
+            <PostAccessControlFields
+              value={toPostAccessFormValue(formData)}
+              onChange={(nextValue) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  ...nextValue,
+                }))
+              }
+              passwordText={formData.accessPasswordText}
+              onPasswordTextChange={(nextValue) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  accessPasswordText: nextValue,
+                }))
+              }
+            />
           </div>
 
           {/* 版权许可 */}

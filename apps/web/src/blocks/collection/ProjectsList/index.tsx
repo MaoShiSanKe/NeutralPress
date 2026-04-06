@@ -12,6 +12,7 @@ import type {
 } from "@/blocks/collection/ProjectsList/types";
 import type { BlockComponentProps } from "@/blocks/core/definition";
 import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
+import BrowserDateTime from "@/components/client/BrowserDateTime";
 import type { GridArea } from "@/components/client/layout/RowGrid";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import Link from "@/components/ui/Link";
@@ -20,25 +21,29 @@ import ParallaxImageCarousel from "@/components/ui/ParallaxImageCarousel";
 const TOP_AREAS: GridArea[] = [1, 2, 3, 4, 5, 6];
 const BOTTOM_AREAS: GridArea[] = [7, 8, 9, 10, 11, 12];
 
-function formatDate(value: string | Date | null): string {
-  if (!value) return "未记录";
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "未记录";
-  return date.toLocaleDateString("zh-CN");
-}
-
-function formatPeriod(
+function renderPeriod(
   startedAt: string | Date | null,
   completedAt: string | Date | null,
-): string | undefined {
-  const start = formatDate(startedAt);
-  const end = completedAt ? formatDate(completedAt) : "至今";
-
-  if (start === "未记录" && end === "至今") {
-    return undefined;
+): React.ReactNode {
+  if (!startedAt && !completedAt) {
+    return null;
   }
 
-  return `${start} - ${end}`;
+  return (
+    <>
+      <BrowserDateTime value={startedAt} precision="date" fallback="未记录" />
+      {" - "}
+      {completedAt ? (
+        <BrowserDateTime
+          value={completedAt}
+          precision="date"
+          fallback="未记录"
+        />
+      ) : (
+        "至今"
+      )}
+    </>
+  );
 }
 
 function formatLinkLabel(link: string, index: number): string {
@@ -142,7 +147,7 @@ function ProjectTextBlock({
   const detailHref = `/projects/${project.slug}`;
   const languagesText = project.languages.join(" / ");
   const licenseText = project.license?.trim();
-  const periodText = formatPeriod(project.startedAt, project.completedAt);
+  const periodContent = renderPeriod(project.startedAt, project.completedAt);
   const statusBadge = getProjectStatusBadge(project.status);
 
   return (
@@ -177,10 +182,10 @@ function ProjectTextBlock({
                 {licenseText}
               </span>
             ) : null}
-            {periodText ? (
+            {periodContent ? (
               <span className="flex items-center gap-1" data-fade>
                 <RiCalendarTodoLine size="1.2em" />
-                {periodText}
+                {periodContent}
               </span>
             ) : null}
             {statusBadge ? (

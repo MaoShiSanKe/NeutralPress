@@ -21651,6 +21651,2374 @@
         },
         "required": ["success", "message", "timestamp", "requestId", "data"],
         "additionalProperties": false
+      },
+      "GetAutoUpdateOverview": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetAutoUpdateOverviewSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "config": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": ["REPOSITORY", "CONTAINER"]
+                  },
+                  "repo": {
+                    "type": "object",
+                    "properties": {
+                      "fullName": {
+                        "type": "string"
+                      },
+                      "branch": {
+                        "type": "string"
+                      },
+                      "pat": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["fullName", "branch", "pat"],
+                    "additionalProperties": false
+                  },
+                  "container": {
+                    "type": "object",
+                    "properties": {
+                      "watchtowerBaseUrl": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["watchtowerBaseUrl"],
+                    "additionalProperties": false
+                  },
+                  "updatedAt": {
+                    "type": "string"
+                  }
+                },
+                "required": ["mode", "repo", "container", "updatedAt"],
+                "additionalProperties": false
+              },
+              "runtime": {
+                "type": "object",
+                "properties": {
+                  "appVersion": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "commit": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "buildId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "builtAt": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "collectedAt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "appVersion",
+                  "commit",
+                  "buildId",
+                  "builtAt",
+                  "collectedAt"
+                ],
+                "additionalProperties": false
+              },
+              "repoStatus": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "available": {
+                        "type": "boolean"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "UNKNOWN",
+                          "MISSING_CONFIG",
+                          "IDENTICAL",
+                          "BEHIND",
+                          "AHEAD",
+                          "DIVERGED",
+                          "BLOCKED_VERSION",
+                          "ERROR"
+                        ]
+                      },
+                      "message": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "currentVersion": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "targetVersion": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "localSha": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "upstreamSha": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "aheadBy": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "behindBy": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "compareUrl": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "available",
+                      "status",
+                      "message",
+                      "currentVersion",
+                      "targetVersion",
+                      "localSha",
+                      "upstreamSha",
+                      "aheadBy",
+                      "behindBy",
+                      "compareUrl"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["config", "runtime", "repoStatus"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "UpdateAutoUpdateConfig": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "$ref": "#/components/schemas/UpdateAutoUpdateConfig"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/UpdateAutoUpdateConfig"
+          },
+          "repoFullName": {
+            "$ref": "#/components/schemas/UpdateAutoUpdateConfig"
+          },
+          "repoBranch": {
+            "$ref": "#/components/schemas/UpdateAutoUpdateConfig"
+          },
+          "repoPat": {
+            "$ref": "#/components/schemas/UpdateAutoUpdateConfig"
+          },
+          "watchtowerBaseUrl": {
+            "$ref": "#/components/schemas/UpdateAutoUpdateConfig"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateAutoUpdateConfigSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["REPOSITORY", "CONTAINER"]
+              },
+              "repo": {
+                "type": "object",
+                "properties": {
+                  "fullName": {
+                    "type": "string"
+                  },
+                  "branch": {
+                    "type": "string"
+                  },
+                  "pat": {
+                    "type": "string"
+                  }
+                },
+                "required": ["fullName", "branch", "pat"],
+                "additionalProperties": false
+              },
+              "container": {
+                "type": "object",
+                "properties": {
+                  "watchtowerBaseUrl": {
+                    "type": "string"
+                  }
+                },
+                "required": ["watchtowerBaseUrl"],
+                "additionalProperties": false
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": ["mode", "repo", "container", "updatedAt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "TriggerAutoUpdate": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["REPOSITORY", "CONTAINER"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "TriggerAutoUpdateSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["REPOSITORY", "CONTAINER"]
+              },
+              "accepted": {
+                "type": "boolean"
+              },
+              "startedAt": {
+                "type": "string"
+              },
+              "message": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "runtimeBefore": {
+                "type": "object",
+                "properties": {
+                  "appVersion": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "commit": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "buildId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "builtAt": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "collectedAt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "appVersion",
+                  "commit",
+                  "buildId",
+                  "builtAt",
+                  "collectedAt"
+                ],
+                "additionalProperties": false
+              },
+              "repoStatusBefore": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "available": {
+                        "type": "boolean"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "UNKNOWN",
+                          "MISSING_CONFIG",
+                          "IDENTICAL",
+                          "BEHIND",
+                          "AHEAD",
+                          "DIVERGED",
+                          "BLOCKED_VERSION",
+                          "ERROR"
+                        ]
+                      },
+                      "message": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "currentVersion": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "targetVersion": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "localSha": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "upstreamSha": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "aheadBy": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "behindBy": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "compareUrl": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "available",
+                      "status",
+                      "message",
+                      "currentVersion",
+                      "targetVersion",
+                      "localSha",
+                      "upstreamSha",
+                      "aheadBy",
+                      "behindBy",
+                      "compareUrl"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "mode",
+              "accepted",
+              "startedAt",
+              "message",
+              "runtimeBefore"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetRuntimeVersionInfo": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetRuntimeVersionInfoSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "appVersion": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "commit": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "buildId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "builtAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "collectedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "appVersion",
+              "commit",
+              "buildId",
+              "builtAt",
+              "collectedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "BackupScope": {
+        "type": "string",
+        "enum": ["CORE_BASE", "ASSETS", "CONTENT", "ANALYTICS", "OPS_LOGS"]
+      },
+      "BackupExportMode": {
+        "type": "string",
+        "enum": ["AUTO", "DIRECT", "OSS"]
+      },
+      "BackupRestoreMode": {
+        "type": "string",
+        "enum": ["REPLACE"]
+      },
+      "BackupSource": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "DIRECT"
+              },
+              "content": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["type", "content"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "OSS_URL"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "expectedChecksum": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": ["type", "url"],
+            "additionalProperties": false
+          }
+        ],
+        "type": "object"
+      },
+      "BackupScopeItem": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/BackupScopeItem"
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dependsOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BackupScopeItem"
+            }
+          }
+        },
+        "required": ["scope", "label", "description", "dependsOn"],
+        "additionalProperties": false
+      },
+      "BackupArchiveMeta": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["CORE_BASE", "ASSETS", "CONTENT", "ANALYTICS", "OPS_LOGS"]
+          },
+          "exportedAt": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "scope",
+          "exportedAt",
+          "fileName",
+          "checksum"
+        ],
+        "additionalProperties": false
+      },
+      "BackupArchive": {
+        "type": "object",
+        "properties": {
+          "meta": {
+            "type": "object",
+            "properties": {
+              "schemaVersion": {
+                "type": "number",
+                "const": 1
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "CORE_BASE",
+                  "ASSETS",
+                  "CONTENT",
+                  "ANALYTICS",
+                  "OPS_LOGS"
+                ]
+              },
+              "exportedAt": {
+                "type": "string"
+              },
+              "fileName": {
+                "type": "string"
+              },
+              "checksum": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": [
+              "schemaVersion",
+              "scope",
+              "exportedAt",
+              "fileName",
+              "checksum"
+            ],
+            "additionalProperties": false
+          },
+          "data": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "required": ["meta", "data"],
+        "additionalProperties": false
+      },
+      "BackupExportDirectResult": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "DIRECT"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["CORE_BASE", "ASSETS", "CONTENT", "ANALYTICS", "OPS_LOGS"]
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "scope",
+          "fileName",
+          "sizeBytes",
+          "checksum",
+          "content"
+        ],
+        "additionalProperties": false
+      },
+      "BackupExportOssResult": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "OSS"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["CORE_BASE", "ASSETS", "CONTENT", "ANALYTICS", "OPS_LOGS"]
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "key": {
+            "type": "string"
+          },
+          "providerId": {
+            "type": "string"
+          },
+          "providerName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "scope",
+          "fileName",
+          "sizeBytes",
+          "checksum",
+          "url",
+          "key",
+          "providerId",
+          "providerName"
+        ],
+        "additionalProperties": false
+      },
+      "BackupExportOssRequiredResult": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "OSS_REQUIRED"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["CORE_BASE", "ASSETS", "CONTENT", "ANALYTICS", "OPS_LOGS"]
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "limitBytes": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "scope",
+          "fileName",
+          "sizeBytes",
+          "limitBytes",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "BackupExportResult": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "DIRECT"
+              },
+              "scope": {
+                "$ref": "#/components/schemas/BackupExportResult"
+              },
+              "fileName": {
+                "type": "string"
+              },
+              "sizeBytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "checksum": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode",
+              "scope",
+              "fileName",
+              "sizeBytes",
+              "checksum",
+              "content"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "OSS"
+              },
+              "scope": {
+                "$ref": "#/components/schemas/BackupExportResult"
+              },
+              "fileName": {
+                "type": "string"
+              },
+              "sizeBytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "checksum": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "key": {
+                "type": "string"
+              },
+              "providerId": {
+                "type": "string"
+              },
+              "providerName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode",
+              "scope",
+              "fileName",
+              "sizeBytes",
+              "checksum",
+              "url",
+              "key",
+              "providerId",
+              "providerName"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "OSS_REQUIRED"
+              },
+              "scope": {
+                "$ref": "#/components/schemas/BackupExportResult"
+              },
+              "fileName": {
+                "type": "string"
+              },
+              "sizeBytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "limitBytes": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode",
+              "scope",
+              "fileName",
+              "sizeBytes",
+              "limitBytes",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "type": "object"
+      },
+      "BackupIssue": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": ["error", "warning"]
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["level", "code", "message"],
+        "additionalProperties": false
+      },
+      "BackupTablePlan": {
+        "type": "object",
+        "properties": {
+          "table": {
+            "type": "string"
+          },
+          "current": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "incoming": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "toDelete": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "toInsert": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["table", "current", "incoming", "toDelete", "toInsert"],
+        "additionalProperties": false
+      },
+      "BackupDryRunResult": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["CORE_BASE", "ASSETS", "CONTENT", "ANALYTICS", "OPS_LOGS"]
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["REPLACE"]
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "confirmText": {
+            "type": "string"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "level": {
+                  "type": "string",
+                  "enum": ["error", "warning"]
+                },
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["level", "code", "message"],
+              "additionalProperties": false
+            }
+          },
+          "tablePlans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "table": {
+                  "type": "string"
+                },
+                "current": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "incoming": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "toDelete": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "toInsert": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "table",
+                "current",
+                "incoming",
+                "toDelete",
+                "toInsert"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "currentRows": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "incomingRows": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "toDelete": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "toInsert": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["currentRows", "incomingRows", "toDelete", "toInsert"],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "scope",
+          "mode",
+          "checksum",
+          "sizeBytes",
+          "ready",
+          "confirmText",
+          "issues",
+          "tablePlans",
+          "summary"
+        ],
+        "additionalProperties": false
+      },
+      "BackupImportResult": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["CORE_BASE", "ASSETS", "CONTENT", "ANALYTICS", "OPS_LOGS"]
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["REPLACE"]
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "importedAt": {
+            "type": "string"
+          },
+          "tableStats": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "table": {
+                  "type": "string"
+                },
+                "current": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "incoming": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "toDelete": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "toInsert": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "table",
+                "current",
+                "incoming",
+                "toDelete",
+                "toInsert"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "deletedRows": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "insertedRows": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["deletedRows", "insertedRows"],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "scope",
+          "mode",
+          "checksum",
+          "importedAt",
+          "tableStats",
+          "summary"
+        ],
+        "additionalProperties": false
+      },
+      "BackupImportUploadInitUnsupportedResult": {
+        "type": "object",
+        "properties": {
+          "strategy": {
+            "type": "string",
+            "const": "UNSUPPORTED"
+          },
+          "providerType": {
+            "type": "string"
+          },
+          "providerName": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["strategy", "providerType", "providerName", "message"],
+        "additionalProperties": false
+      },
+      "BackupImportUploadInitS3Result": {
+        "type": "object",
+        "properties": {
+          "strategy": {
+            "type": "string",
+            "const": "CLIENT_S3"
+          },
+          "providerType": {
+            "type": "string",
+            "const": "AWS_S3"
+          },
+          "providerName": {
+            "type": "string"
+          },
+          "storageProviderId": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "uploadMethod": {
+            "type": "string",
+            "const": "PUT"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "uploadHeaders": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "strategy",
+          "providerType",
+          "providerName",
+          "storageProviderId",
+          "key",
+          "sourceUrl",
+          "uploadMethod",
+          "uploadUrl"
+        ],
+        "additionalProperties": false
+      },
+      "BackupImportUploadInitBlobResult": {
+        "type": "object",
+        "properties": {
+          "strategy": {
+            "type": "string",
+            "const": "CLIENT_BLOB"
+          },
+          "providerType": {
+            "type": "string",
+            "const": "VERCEL_BLOB"
+          },
+          "providerName": {
+            "type": "string"
+          },
+          "storageProviderId": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "blobPathname": {
+            "type": "string"
+          },
+          "blobClientToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy",
+          "providerType",
+          "providerName",
+          "storageProviderId",
+          "key",
+          "sourceUrl",
+          "blobPathname",
+          "blobClientToken"
+        ],
+        "additionalProperties": false
+      },
+      "BackupImportUploadInitResult": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "strategy": {
+                "type": "string",
+                "const": "UNSUPPORTED"
+              },
+              "providerType": {
+                "type": "string"
+              },
+              "providerName": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["strategy", "providerType", "providerName", "message"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "strategy": {
+                "type": "string",
+                "const": "CLIENT_S3"
+              },
+              "providerType": {
+                "type": "string",
+                "const": "AWS_S3"
+              },
+              "providerName": {
+                "type": "string"
+              },
+              "storageProviderId": {
+                "type": "string"
+              },
+              "key": {
+                "type": "string"
+              },
+              "sourceUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "uploadMethod": {
+                "type": "string",
+                "const": "PUT"
+              },
+              "uploadUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "uploadHeaders": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "strategy",
+              "providerType",
+              "providerName",
+              "storageProviderId",
+              "key",
+              "sourceUrl",
+              "uploadMethod",
+              "uploadUrl"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "strategy": {
+                "type": "string",
+                "const": "CLIENT_BLOB"
+              },
+              "providerType": {
+                "type": "string",
+                "const": "VERCEL_BLOB"
+              },
+              "providerName": {
+                "type": "string"
+              },
+              "storageProviderId": {
+                "type": "string"
+              },
+              "key": {
+                "type": "string"
+              },
+              "sourceUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "blobPathname": {
+                "type": "string"
+              },
+              "blobClientToken": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "strategy",
+              "providerType",
+              "providerName",
+              "storageProviderId",
+              "key",
+              "sourceUrl",
+              "blobPathname",
+              "blobClientToken"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "type": "object"
+      },
+      "GetBackupScopes": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetBackupScopesSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "scope": {
+                  "$ref": "#/components/schemas/GetBackupScopesSuccessResponse"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "dependsOn": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetBackupScopesSuccessResponse"
+                  }
+                }
+              },
+              "required": ["scope", "label", "description", "dependsOn"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "ExportBackup": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["CORE_BASE", "ASSETS", "CONTENT", "ANALYTICS", "OPS_LOGS"]
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["AUTO", "DIRECT", "OSS"]
+          }
+        },
+        "required": ["scope"],
+        "additionalProperties": false
+      },
+      "ExportBackupSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "const": "DIRECT"
+                  },
+                  "scope": {
+                    "$ref": "#/components/schemas/ExportBackupSuccessResponse"
+                  },
+                  "fileName": {
+                    "type": "string"
+                  },
+                  "sizeBytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "checksum": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "content": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "scope",
+                  "fileName",
+                  "sizeBytes",
+                  "checksum",
+                  "content"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "const": "OSS"
+                  },
+                  "scope": {
+                    "$ref": "#/components/schemas/ExportBackupSuccessResponse"
+                  },
+                  "fileName": {
+                    "type": "string"
+                  },
+                  "sizeBytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "checksum": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "providerId": {
+                    "type": "string"
+                  },
+                  "providerName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "scope",
+                  "fileName",
+                  "sizeBytes",
+                  "checksum",
+                  "url",
+                  "key",
+                  "providerId",
+                  "providerName"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "const": "OSS_REQUIRED"
+                  },
+                  "scope": {
+                    "$ref": "#/components/schemas/ExportBackupSuccessResponse"
+                  },
+                  "fileName": {
+                    "type": "string"
+                  },
+                  "sizeBytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "limitBytes": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "scope",
+                  "fileName",
+                  "sizeBytes",
+                  "limitBytes",
+                  "message"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "type": "object"
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "InitBackupImportUpload": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fileSize": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "contentType": {
+            "type": "string"
+          }
+        },
+        "required": ["fileName", "fileSize"],
+        "additionalProperties": false
+      },
+      "InitBackupImportUploadSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "const": "UNSUPPORTED"
+                  },
+                  "providerType": {
+                    "type": "string"
+                  },
+                  "providerName": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "strategy",
+                  "providerType",
+                  "providerName",
+                  "message"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "const": "CLIENT_S3"
+                  },
+                  "providerType": {
+                    "type": "string",
+                    "const": "AWS_S3"
+                  },
+                  "providerName": {
+                    "type": "string"
+                  },
+                  "storageProviderId": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "sourceUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "uploadMethod": {
+                    "type": "string",
+                    "const": "PUT"
+                  },
+                  "uploadUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "uploadHeaders": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "strategy",
+                  "providerType",
+                  "providerName",
+                  "storageProviderId",
+                  "key",
+                  "sourceUrl",
+                  "uploadMethod",
+                  "uploadUrl"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "const": "CLIENT_BLOB"
+                  },
+                  "providerType": {
+                    "type": "string",
+                    "const": "VERCEL_BLOB"
+                  },
+                  "providerName": {
+                    "type": "string"
+                  },
+                  "storageProviderId": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "sourceUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "blobPathname": {
+                    "type": "string"
+                  },
+                  "blobClientToken": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "strategy",
+                  "providerType",
+                  "providerName",
+                  "storageProviderId",
+                  "key",
+                  "sourceUrl",
+                  "blobPathname",
+                  "blobClientToken"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "type": "object"
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "DryRunBackupImport": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "DIRECT"
+                  },
+                  "content": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["type", "content"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "OSS_URL"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "expectedChecksum": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              }
+            ],
+            "type": "object"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["REPLACE"]
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["CORE_BASE", "ASSETS", "CONTENT", "ANALYTICS", "OPS_LOGS"]
+          }
+        },
+        "required": ["source"],
+        "additionalProperties": false
+      },
+      "DryRunBackupImportSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "CORE_BASE",
+                  "ASSETS",
+                  "CONTENT",
+                  "ANALYTICS",
+                  "OPS_LOGS"
+                ]
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["REPLACE"]
+              },
+              "checksum": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "sizeBytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "confirmText": {
+                "type": "string"
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "level": {
+                      "type": "string",
+                      "enum": ["error", "warning"]
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["level", "code", "message"],
+                  "additionalProperties": false
+                }
+              },
+              "tablePlans": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "table": {
+                      "type": "string"
+                    },
+                    "current": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "incoming": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "toDelete": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "toInsert": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "table",
+                    "current",
+                    "incoming",
+                    "toDelete",
+                    "toInsert"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "summary": {
+                "type": "object",
+                "properties": {
+                  "currentRows": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "incomingRows": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "toDelete": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "toInsert": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "currentRows",
+                  "incomingRows",
+                  "toDelete",
+                  "toInsert"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "scope",
+              "mode",
+              "checksum",
+              "sizeBytes",
+              "ready",
+              "confirmText",
+              "issues",
+              "tablePlans",
+              "summary"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "ImportBackup": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "DIRECT"
+                  },
+                  "content": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["type", "content"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "OSS_URL"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "expectedChecksum": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                },
+                "required": ["type", "url"],
+                "additionalProperties": false
+              }
+            ],
+            "type": "object"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["REPLACE"]
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["CORE_BASE", "ASSETS", "CONTENT", "ANALYTICS", "OPS_LOGS"]
+          },
+          "expectedChecksum": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "confirmText": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["source", "expectedChecksum", "confirmText"],
+        "additionalProperties": false
+      },
+      "ImportBackupSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "CORE_BASE",
+                  "ASSETS",
+                  "CONTENT",
+                  "ANALYTICS",
+                  "OPS_LOGS"
+                ]
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["REPLACE"]
+              },
+              "checksum": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "importedAt": {
+                "type": "string"
+              },
+              "tableStats": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "table": {
+                      "type": "string"
+                    },
+                    "current": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "incoming": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "toDelete": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "toInsert": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "table",
+                    "current",
+                    "incoming",
+                    "toDelete",
+                    "toInsert"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "summary": {
+                "type": "object",
+                "properties": {
+                  "deletedRows": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "insertedRows": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": ["deletedRows", "insertedRows"],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "scope",
+              "mode",
+              "checksum",
+              "importedAt",
+              "tableStats",
+              "summary"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
       }
     },
     "securitySchemes": {

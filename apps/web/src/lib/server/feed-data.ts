@@ -7,6 +7,7 @@ import { unified } from "unified";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import { type ConfigItem, getRawConfig } from "@/lib/server/config-cache";
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 import {
   markdownRehypePlugins,
@@ -68,9 +69,78 @@ export interface FeedData {
   };
 }
 
+function normalizeFeedText(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;|&#60;/gi, "<")
+    .replace(/&gt;|&#62;/gi, ">")
+    .replace(/&quot;|&#34;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;|&#38;/gi, "&")
+    .replace(/&[a-zA-Z0-9#]+;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stripLeadingMarkdownTitle(markdown: string, title: string): string {
+  const normalizedTitle = normalizeFeedText(title);
+  if (!normalizedTitle) {
+    return markdown;
+  }
+
+  const atxHeadingMatch = markdown.match(
+    /^\uFEFF?\s*#\s+(.+?)\s*#*\s*(?:\r?\n)+/,
+  );
+  if (
+    atxHeadingMatch &&
+    normalizeFeedText(atxHeadingMatch[1] ?? "") === normalizedTitle
+  ) {
+    return markdown.slice(atxHeadingMatch[0].length).trimStart();
+  }
+
+  const setextHeadingMatch = markdown.match(
+    /^\uFEFF?\s*([^\r\n]+)\r?\n=+\s*(?:\r?\n)+/,
+  );
+  if (
+    setextHeadingMatch &&
+    normalizeFeedText(setextHeadingMatch[1] ?? "") === normalizedTitle
+  ) {
+    return markdown.slice(setextHeadingMatch[0].length).trimStart();
+  }
+
+  return markdown;
+}
+
+function stripLeadingHtmlTitle(html: string, title: string): string {
+  const normalizedTitle = normalizeFeedText(title);
+  if (!normalizedTitle) {
+    return html;
+  }
+
+  const headingMatch = html.match(/^\s*<h1\b[^>]*>([\s\S]*?)<\/h1>\s*/i);
+  if (
+    headingMatch &&
+    normalizeFeedText(headingMatch[1] ?? "") === normalizedTitle
+  ) {
+    return html.slice(headingMatch[0].length).trimStart();
+  }
+
+  return html;
+}
+
+function buildFeedLeadHtml(postUrl: string): string {
+  return `<p class="feed-lead">前往 <a href="${postUrl}">${postUrl}</a> 查看以获得最佳体验。</p>`;
+}
+
+function prependFeedLead(content: string, postUrl: string): string {
+  const leadHtml = buildFeedLeadHtml(postUrl);
+  return content ? `${leadHtml}\n${content}` : leadHtml;
+}
+
 export async function getFeedData(): Promise<FeedData> {
   "use cache";
-  cacheTag("posts", "config");
+  cacheTag("posts/list", "config");
   cacheLife("max");
 
   const [
@@ -161,8 +231,7 @@ export async function getFeedData(): Promise<FeedData> {
 
   const posts = await prisma.post.findMany({
     where: {
-      status: "PUBLISHED",
-      deletedAt: null,
+      ...LISTABLE_POST_PUBLISHED_WHERE,
       publishedAt: { not: null },
     },
     orderBy: {
@@ -176,6 +245,7 @@ export async function getFeedData(): Promise<FeedData> {
       content: true,
       publishedAt: true,
       updatedAt: true,
+      accessMode: true,
       author: {
         select: {
           nickname: true,
@@ -263,7 +333,23 @@ export async function getFeedData(): Promise<FeedData> {
 
   const formattedPosts: FeedPost[] = await Promise.all(
     posts.map(async (post) => {
+      const postUrl = `${siteConfig.url}/posts/${post.slug}`;
+      const isProtectedPost = post.accessMode !== "PUBLIC";
       const featuredImage = getFeaturedImageUrl(post.mediaRefs);
+
+      if (isProtectedPost) {
+        return {
+          title: post.title,
+          slug: post.slug,
+          excerpt: post.excerpt,
+          content: buildFeedLeadHtml(postUrl),
+          publishedAt: post.publishedAt,
+          updatedAt: post.updatedAt,
+          author: post.author,
+          categories: post.categories,
+          featuredImage,
+        };
+      }
 
       // text-version v2: content 字段已经是最新内容
       const latestContent = post.content;
@@ -273,7 +359,12 @@ export async function getFeedData(): Promise<FeedData> {
 
       if (rssConfig.showFullContent) {
         // 转换为 HTML
-        content = await markdownToHtml(latestContent);
+        const markdownWithoutTitle = stripLeadingMarkdownTitle(
+          latestContent,
+          post.title,
+        );
+        content = await markdownToHtml(markdownWithoutTitle);
+        content = stripLeadingHtmlTitle(content, post.title);
       } else {
         content = ""; // 不显示全文
         if (!excerpt && rssConfig.autoGenerateExcerpt) {
@@ -284,11 +375,9 @@ export async function getFeedData(): Promise<FeedData> {
         } else {
           content = excerpt || "";
         }
-        // 添加阅读全文链接
-        const postUrl = `${siteConfig.url}/posts/${post.slug}`;
-        const readMoreHtml = `<br /><br />阅读全文：<a href="${postUrl}">${postUrl}</a>`;
-        content += readMoreHtml;
       }
+
+      content = prependFeedLead(content, postUrl);
 
       return {
         title: post.title,

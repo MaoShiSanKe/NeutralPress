@@ -1,6 +1,6 @@
 import {
-  countCategoryPosts,
   countDirectChildren,
+  countPublicCategoryPosts,
   findCategoryByPath,
 } from "@/lib/server/category-utils";
 
@@ -47,7 +47,7 @@ export async function categoryPostsInterpolator(
     // 统计直接子分类数
     countDirectChildren(category.id),
     // 统计该分类及所有子孙分类下的已发布文章数
-    countCategoryPosts(category.id),
+    countPublicCategoryPosts(category.id),
   ]);
 
   const totalPages = Math.ceil(totalPosts / pageSize);

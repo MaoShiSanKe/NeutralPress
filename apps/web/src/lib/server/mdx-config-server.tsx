@@ -13,6 +13,7 @@ import { codeToHtml } from "shiki";
 
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
+import { createHeadingProcessor } from "@/lib/shared/heading-utils";
 import { type MediaFileInfo, processImageUrl } from "@/lib/shared/image-utils";
 import {
   createShikiConfig,
@@ -45,6 +46,22 @@ function extractCodeText(children?: React.ReactNode): string {
     return children
       .map((child) => (typeof child === "string" ? child : ""))
       .join("");
+  }
+
+  return "";
+}
+
+function extractHeadingText(children?: React.ReactNode): string {
+  if (typeof children === "string" || typeof children === "number") {
+    return String(children);
+  }
+
+  if (Array.isArray(children)) {
+    return children.map((child) => extractHeadingText(child)).join("");
+  }
+
+  if (React.isValidElement<{ children?: React.ReactNode }>(children)) {
+    return extractHeadingText(children.props.children);
   }
 
   return "";
@@ -258,6 +275,8 @@ export function createServerMarkdownComponents(
   mediaFileMap?: Map<string, MediaFileInfo>,
   shikiTheme?: ShikiTheme,
 ): Components {
+  const headingProcessor = createHeadingProcessor();
+
   return {
     // 代码处理
     pre: ({ children }: React.HTMLAttributes<HTMLPreElement>) => (
@@ -309,6 +328,84 @@ export function createServerMarkdownComponents(
       <div className="overflow-x-auto my-6">
         <table {...rest}>{children}</table>
       </div>
+    ),
+    h1: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h1"> & { node?: unknown }) => (
+      <h1
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h1>
+    ),
+    h2: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h2"> & { node?: unknown }) => (
+      <h2
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h2>
+    ),
+    h3: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h3"> & { node?: unknown }) => (
+      <h3
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h3>
+    ),
+    h4: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h4"> & { node?: unknown }) => (
+      <h4
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h4>
+    ),
+    h5: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h5"> & { node?: unknown }) => (
+      <h5
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h5>
+    ),
+    h6: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h6"> & { node?: unknown }) => (
+      <h6
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h6>
     ),
   } as Components;
 }

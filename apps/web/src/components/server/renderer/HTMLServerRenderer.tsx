@@ -1,5 +1,7 @@
 import "server-only";
 
+import { ensureHtmlHeadingIds } from "@/lib/server/rich-text-outline";
+
 interface HTMLServerRendererProps {
   source: string;
   className?: string;
@@ -13,7 +15,12 @@ export default function HTMLServerRenderer({
   source,
   className = "max-w-4xl mx-auto md-content",
 }: HTMLServerRendererProps) {
+  const processedSource = ensureHtmlHeadingIds(source);
+
   return (
-    <div className={className} dangerouslySetInnerHTML={{ __html: source }} />
+    <div
+      className={className}
+      dangerouslySetInnerHTML={{ __html: processedSource }}
+    />
   );
 }

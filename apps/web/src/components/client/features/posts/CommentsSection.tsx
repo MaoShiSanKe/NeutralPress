@@ -39,12 +39,14 @@ import {
   likeComment,
   unlikeComment,
 } from "@/actions/comment";
+import { CommentLoginButton } from "@/components/client/features/posts/CommentLoginButton";
 import { CaptchaButton } from "@/components/ui/CaptchaButton";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useConfig } from "@/context/ConfigContext";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { resolveApiResponse } from "@/lib/client/run-with-auth";
+import type { OAuthProvider } from "@/lib/server/oauth";
 import { formatDateTime } from "@/lib/shared/date-format";
 import { highlightCode } from "@/lib/shared/mdx-config";
 import type { ConfigType } from "@/types/config";
@@ -680,6 +682,15 @@ export default function CommentsSection({
   const shikiTheme = useConfig(
     "site.shiki.theme",
   ) as ConfigType<"site.shiki.theme">;
+  const googleSSOEnabled =
+    ((useConfig("user.sso.google.enabled") as unknown as boolean) ?? false) ===
+    true;
+  const githubSSOEnabled =
+    ((useConfig("user.sso.github.enabled") as unknown as boolean) ?? false) ===
+    true;
+  const microsoftSSOEnabled =
+    ((useConfig("user.sso.microsoft.enabled") as unknown as boolean) ??
+      false) === true;
 
   // 基础状态
   const [comments, setComments] = useState<CommentItem[]>([]);
@@ -753,6 +764,13 @@ export default function CommentsSection({
     () => markdownComponents(shikiTheme),
     [shikiTheme],
   );
+  const enabledOAuthProviders = useMemo(() => {
+    const providers: OAuthProvider[] = [];
+    if (googleSSOEnabled) providers.push("google");
+    if (githubSSOEnabled) providers.push("github");
+    if (microsoftSSOEnabled) providers.push("microsoft");
+    return providers;
+  }, [githubSSOEnabled, googleSSOEnabled, microsoftSSOEnabled]);
 
   // 监听验证码消息
   useBroadcast((message: { type: string; token?: string }) => {
@@ -1366,6 +1384,10 @@ export default function CommentsSection({
       hoveredPath[hoveredPath.length - 2] === comment.id,
     [hoveredPath],
   );
+  const handleLoginNavigate = () => {
+    const redirectTarget = `${window.location.pathname}${window.location.search}#comment`;
+    navigate(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
+  };
 
   // 如果不允许评论，不渲染
   if (!allowComments) {
@@ -1521,20 +1543,10 @@ export default function CommentsSection({
               disabled={!content.trim()}
             />
             {isAnonymous && (
-              <Tooltip content="登录至现有账号，或使用 Github/Google/Microsoft 账号快捷登录">
-                <Button
-                  label="登录"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() =>
-                    navigate(
-                      "/login?redirect=" +
-                        encodeURIComponent(window.location.pathname) +
-                        "#comment",
-                    )
-                  }
-                ></Button>
-              </Tooltip>
+              <CommentLoginButton
+                enabledProviders={enabledOAuthProviders}
+                onClick={handleLoginNavigate}
+              />
             )}
 
             {captchaLoaded ? (

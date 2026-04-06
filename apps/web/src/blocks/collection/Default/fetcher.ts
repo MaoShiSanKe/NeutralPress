@@ -1,6 +1,7 @@
 import { inferRandomSource } from "@/blocks/collection/Default/helpers";
 import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import { interpolatorMap } from "@/blocks/core/placeholders";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 /**
@@ -132,10 +133,7 @@ async function getMostPopularTagSlug(): Promise<string | undefined> {
       },
       where: {
         posts: {
-          some: {
-            status: "PUBLISHED",
-            deletedAt: null,
-          },
+          some: LISTABLE_POST_PUBLISHED_WHERE,
         },
       },
     });
@@ -157,10 +155,7 @@ async function getMostPopularCategorySlug(): Promise<string | undefined> {
       },
       where: {
         posts: {
-          some: {
-            status: "PUBLISHED",
-            deletedAt: null,
-          },
+          some: LISTABLE_POST_PUBLISHED_WHERE,
         },
       },
       orderBy: {

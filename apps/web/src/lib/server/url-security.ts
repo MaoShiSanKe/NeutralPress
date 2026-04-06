@@ -10,6 +10,22 @@ import { isPrivateIP } from "@/lib/server/ip-utils";
 
 const BLOCKED_HOSTNAMES = new Set(["localhost", "localhost.localdomain"]);
 
+type ResolvedAddress = {
+  address: string;
+  family: 4 | 6;
+};
+
+type LookupSingleCallback = (
+  error: NodeJS.ErrnoException | null,
+  address: string,
+  family: number,
+) => void;
+
+type LookupAllCallback = (
+  error: NodeJS.ErrnoException | null,
+  addresses: ResolvedAddress[],
+) => void;
+
 function isReservedIpv4(ip: string): boolean {
   if (isPrivateIP(ip)) return true;
 
@@ -84,12 +100,20 @@ function toHeaders(rawHeaders: IncomingHttpHeaders): Headers {
   return headers;
 }
 
-function normalizeResolvedFamily(address: string): number {
+function normalizeResolvedFamily(address: string): 4 | 6 {
   const family = net.isIP(address);
   if (family === 4 || family === 6) {
     return family;
   }
   throw new Error("解析到的地址不是有效 IP");
+}
+
+function isLookupAllOptions(options: unknown): options is { all: true } {
+  if (typeof options !== "object" || options === null) {
+    return false;
+  }
+
+  return "all" in options && options.all === true;
 }
 
 async function requestWithPinnedDns(params: {
@@ -121,8 +145,24 @@ async function requestWithPinnedDns(params: {
         path: `${url.pathname}${url.search}`,
         headers,
         servername: url.hostname,
-        lookup: (_hostname, _options, callback) => {
-          callback(null, resolvedIp, family);
+        lookup: (
+          _hostname: string,
+          options: unknown,
+          callback?: LookupSingleCallback | LookupAllCallback,
+        ) => {
+          if (!callback) return;
+
+          if (isLookupAllOptions(options)) {
+            (callback as LookupAllCallback)(null, [
+              {
+                address: resolvedIp,
+                family,
+              },
+            ]);
+            return;
+          }
+
+          (callback as LookupSingleCallback)(null, resolvedIp, family);
         },
       },
       (res) => {
@@ -190,7 +230,7 @@ export interface FetchPublicHttpUrlBufferResult {
 export async function assertPublicHttpUrl(
   rawUrl: string,
   options: { requireHttps?: boolean } = {},
-): Promise<{ url: URL; resolvedIp?: string }> {
+): Promise<{ url: URL; resolvedIp: string }> {
   const url: URL = new URL(rawUrl);
   const protocol = url.protocol.toLowerCase();
   const { requireHttps = false } = options;
@@ -232,12 +272,36 @@ export async function assertPublicHttpUrl(
     throw new Error("无法解析目标地址");
   }
 
-  if (records.some((record) => isReservedIp(record.address))) {
+  const normalizedRecords = records
+    .map((record) => {
+      const address = record.address?.trim();
+      const family = net.isIP(address);
+      if (!address || (family !== 4 && family !== 6)) {
+        return null;
+      }
+
+      return {
+        address,
+        family,
+      } as ResolvedAddress;
+    })
+    .filter((record): record is ResolvedAddress => record !== null);
+
+  if (!normalizedRecords.length) {
+    throw new Error("无法解析目标地址");
+  }
+
+  if (normalizedRecords.some((record) => isReservedIp(record.address))) {
     throw new Error("目标地址解析到内网或保留地址");
   }
 
   // 返回第一个解析到的 IP 地址，供调用方直接使用以防止 DNS 重绑定
-  return { url, resolvedIp: records[0]!.address };
+  const firstResolvedRecord = normalizedRecords[0];
+  if (!firstResolvedRecord) {
+    throw new Error("无法解析目标地址");
+  }
+
+  return { url, resolvedIp: firstResolvedRecord.address };
 }
 
 export async function fetchPublicHttpUrlBuffer(
@@ -256,14 +320,9 @@ export async function fetchPublicHttpUrlBuffer(
       await options.validateUrl(safe.url);
     }
 
-    const resolvedIp = safe.resolvedIp;
-    if (!resolvedIp) {
-      throw new Error("目标地址解析失败");
-    }
-
     const response = await requestWithPinnedDns({
       url: safe.url,
-      resolvedIp,
+      resolvedIp: safe.resolvedIp,
       method: options.method,
       headers: options.headers,
       timeoutMs: options.timeoutMs,

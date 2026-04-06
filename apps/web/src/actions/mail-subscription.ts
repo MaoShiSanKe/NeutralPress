@@ -18,6 +18,7 @@ import { getConfig, getConfigs } from "@/lib/server/config-cache";
 import { sendEmail } from "@/lib/server/email";
 import { jwtTokenSign, jwtTokenVerify } from "@/lib/server/jwt";
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
+import { PUBLIC_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
@@ -884,8 +885,7 @@ export async function getMailSubscriptionList(
 
   const latestPost = await prisma.post.findFirst({
     where: {
-      status: "PUBLISHED",
-      deletedAt: null,
+      ...PUBLIC_POST_PUBLISHED_WHERE,
       publishedAt: { not: null },
     },
     orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
@@ -1291,8 +1291,7 @@ export async function getLatestMailDispatchOverview(): Promise<
 
   const latestPost = await prisma.post.findFirst({
     where: {
-      status: "PUBLISHED",
-      deletedAt: null,
+      ...PUBLIC_POST_PUBLISHED_WHERE,
       publishedAt: { not: null },
     },
     orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
@@ -1554,8 +1553,7 @@ export async function dispatchLatestPostMail(
 
   const latestPost = await prisma.post.findFirst({
     where: {
-      status: "PUBLISHED",
-      deletedAt: null,
+      ...PUBLIC_POST_PUBLISHED_WHERE,
       publishedAt: { not: null },
     },
     orderBy: [{ publishedAt: "desc" }, { id: "desc" }],

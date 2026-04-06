@@ -37,6 +37,7 @@ import {
   mediaRefsInclude,
   updateFeaturedImageRef,
 } from "@/lib/server/media-reference";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
@@ -63,8 +64,7 @@ async function getPublishedPostSlugsByTagSlugs(
 
   const posts = await prisma.post.findMany({
     where: {
-      status: "PUBLISHED",
-      deletedAt: null,
+      ...LISTABLE_POST_PUBLISHED_WHERE,
       tags: {
         some: {
           slug: {

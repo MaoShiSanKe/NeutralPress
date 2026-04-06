@@ -5,7 +5,10 @@
 
 import { unstable_cache } from "next/cache";
 
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
+
+import type { Prisma } from ".prisma/client";
 
 const PATH_SEPARATOR = "/";
 
@@ -371,19 +374,40 @@ export async function countCategoryPosts(categoryId: number): Promise<number> {
   const descendantIds = await getAllDescendantIds(categoryId);
   const allIds = [categoryId, ...descendantIds];
 
+  const where: Prisma.PostWhereInput = {
+    categories: {
+      some: {
+        id: { in: allIds },
+      },
+    },
+    deletedAt: null,
+  };
+
   // 2. 统计文章数（使用 distinct 避免一篇文章属于多个子分类被重复统计）
   // 注意：Prisma 的 count 不支持 distinct，所以如果文章属于多个分类，这里原本的逻辑可能会有重复。
   // 但业务逻辑上，"分类下的文章数"通常指属于该分类或子分类的文章总数去重。
-  const count = await prisma.post.count({
-    where: {
-      categories: {
-        some: {
-          id: { in: allIds },
-        },
+  const count = await prisma.post.count({ where });
+
+  return count;
+}
+
+export async function countPublicCategoryPosts(
+  categoryId: number,
+): Promise<number> {
+  // 1. 获取所有子孙 ID
+  const descendantIds = await getAllDescendantIds(categoryId);
+  const allIds = [categoryId, ...descendantIds];
+
+  const where: Prisma.PostWhereInput = {
+    ...LISTABLE_POST_PUBLISHED_WHERE,
+    categories: {
+      some: {
+        id: { in: allIds },
       },
-      deletedAt: null,
     },
-  });
+  };
+
+  const count = await prisma.post.count({ where });
 
   return count;
 }

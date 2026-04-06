@@ -1,3 +1,4 @@
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 /**
@@ -13,9 +14,7 @@ export async function tagsInterpolator(
     prisma.tag.count({
       where: {
         posts: {
-          some: {
-            deletedAt: null,
-          },
+          some: LISTABLE_POST_PUBLISHED_WHERE,
         },
       },
     }),
@@ -23,9 +22,7 @@ export async function tagsInterpolator(
     prisma.tag.findMany({
       where: {
         posts: {
-          some: {
-            deletedAt: null,
-          },
+          some: LISTABLE_POST_PUBLISHED_WHERE,
         },
       },
       select: {

@@ -1,3 +1,4 @@
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 /**
@@ -30,8 +31,7 @@ export async function tagPostsInterpolator(
     // 统计该标签下的已发布文章数
     prisma.post.count({
       where: {
-        status: "PUBLISHED",
-        deletedAt: null,
+        ...LISTABLE_POST_PUBLISHED_WHERE,
         tags: {
           some: { slug },
         },

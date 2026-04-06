@@ -1,3 +1,4 @@
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 /**
@@ -10,11 +11,11 @@ export async function postsInterpolator(
   const [totalPosts, allPosts] = await Promise.all([
     // 统计已发布文章数
     prisma.post.count({
-      where: { status: "PUBLISHED", deletedAt: null },
+      where: LISTABLE_POST_PUBLISHED_WHERE,
     }),
     // 获取所有文章的 slug（用于随机链接）
     prisma.post.findMany({
-      where: { status: "PUBLISHED", deletedAt: null },
+      where: LISTABLE_POST_PUBLISHED_WHERE,
       select: {
         slug: true,
       },

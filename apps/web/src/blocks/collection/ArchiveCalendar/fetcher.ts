@@ -4,6 +4,7 @@ import type {
   YearData,
 } from "@/blocks/collection/ArchiveCalendar/types";
 import type { RuntimeBlockInput } from "@/blocks/core/definition";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 /**
@@ -42,10 +43,7 @@ export async function archiveCalendarBlockFetcher(
   try {
     // 获取所有已发布文章的发布日期
     const posts = await prisma.post.findMany({
-      where: {
-        status: "PUBLISHED",
-        deletedAt: null,
-      },
+      where: LISTABLE_POST_PUBLISHED_WHERE,
       select: {
         publishedAt: true,
       },

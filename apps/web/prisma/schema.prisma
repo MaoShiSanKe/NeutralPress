@@ -164,6 +164,10 @@ model Post {
   status              PostStatus               @default(DRAFT)
   isPinned            Boolean                  @default(false)
   allowComments       Boolean                  @default(true)
+  accessMode          PostAccessMode           @default(PUBLIC)
+  minRole             Role?
+  accessPasswords     String[]
+  accessVersion       Int                      @default(1)
   publishedAt         DateTime? // 发布时间，用于精确控制发布时间
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
@@ -193,9 +197,11 @@ model Post {
   @@index([status])
   @@index([userUid])
   @@index([isPinned])
+  @@index([accessMode])
   @@index([createdAt])
   @@index([updatedAt])
   @@index([status, createdAt]) // 复合索引：按状态和时间查询
+  @@index([status, accessMode, publishedAt])
   @@index([titleSearchVector], type: Gin)
   @@index([contentSearchVector], type: Gin)
 }
@@ -1129,6 +1135,12 @@ enum PostStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+enum PostAccessMode {
+  PUBLIC
+  ROLE
+  PASSWORD
 }
 
 enum PageStatus {

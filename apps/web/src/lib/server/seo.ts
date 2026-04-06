@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 
 import { findCategoryByPath } from "@/lib/server/category-utils";
 import { getConfigs } from "@/lib/server/config-cache";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 // 基础静态配置（不依赖数据库的固定值）
@@ -1781,8 +1782,7 @@ async function calculateTotalPage(
             select: {
               posts: {
                 where: {
-                  status: "PUBLISHED",
-                  deletedAt: null,
+                  ...LISTABLE_POST_PUBLISHED_WHERE,
                 },
               },
             },
@@ -1815,8 +1815,7 @@ async function calculateTotalPage(
               id: { in: allIds },
             },
           },
-          status: "PUBLISHED",
-          deletedAt: null,
+          ...LISTABLE_POST_PUBLISHED_WHERE,
         },
       });
     }

@@ -2,6 +2,12 @@ import { unstable_cache } from "next/cache";
 import { notFound } from "next/navigation";
 
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
+import {
+  LISTABLE_POST_PUBLISHED_WHERE,
+  LISTABLE_POST_VISIBLE_WHERE,
+  PUBLIC_POST_STATUSES,
+  PUBLIC_VISIBLE_POST_WHERE,
+} from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 import { MEDIA_SLOTS } from "@/types/media";
 
@@ -23,6 +29,8 @@ export interface PostData {
   metaKeywords?: string | null;
   robotsIndex?: boolean;
   postMode?: "MARKDOWN" | "MDX";
+  accessMode?: "PUBLIC" | "ROLE" | "PASSWORD";
+  minRole?: "USER" | "ADMIN" | "EDITOR" | "AUTHOR" | null;
   // 为搜索结果添加的额外属性
   summary?: string; // PostCard 需要的摘要属性
   cover?:
@@ -57,6 +65,8 @@ export type FullPostData = Omit<PostData, "categories" | "tags" | "author"> & {
   id: number;
   content: string;
   allowComments: boolean;
+  accessMode: "PUBLIC" | "ROLE" | "PASSWORD";
+  minRole: "USER" | "ADMIN" | "EDITOR" | "AUTHOR" | null;
   author: NonNullable<PostData["author"]>;
   categories: Array<{
     id: number;
@@ -83,15 +93,47 @@ export interface LatestPostJsonLdItem {
   } | null;
 }
 
+export interface PostShellData {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  featuredImage: string | null;
+  metaDescription: string | null;
+  metaKeywords: string | null;
+  robotsIndex: boolean;
+  allowComments: boolean;
+  license: string | null;
+  accessMode: "PUBLIC" | "ROLE" | "PASSWORD";
+  minRole: "USER" | "ADMIN" | "EDITOR" | "AUTHOR" | null;
+  contentLength: number;
+  viewCount: number;
+  categories: Array<{
+    id: number;
+    name: string;
+    slug?: string;
+  }>;
+  tags: Array<{
+    name: string;
+    slug: string;
+  }>;
+  _count: {
+    comments: number;
+  };
+  author: {
+    uid: number;
+    username: string;
+    nickname: string | null;
+  };
+}
+
 export interface RenderedContent {
   content: string;
   mode: "markdown" | "mdx";
 }
-
-const PUBLIC_POST_STATUSES: Array<"PUBLISHED" | "ARCHIVED"> = [
-  "PUBLISHED",
-  "ARCHIVED",
-];
 
 /**
  * 获取公开的文章数据
@@ -103,10 +145,7 @@ export async function getPublishedPost(slug: string): Promise<FullPostData> {
       const post = await prisma.post.findFirst({
         where: {
           slug: s,
-          status: {
-            in: PUBLIC_POST_STATUSES,
-          },
-          deletedAt: null,
+          ...PUBLIC_VISIBLE_POST_WHERE,
         },
         select: {
           id: true,
@@ -125,6 +164,8 @@ export async function getPublishedPost(slug: string): Promise<FullPostData> {
           robotsIndex: true,
           postMode: true,
           license: true,
+          accessMode: true,
+          minRole: true,
           author: {
             select: {
               uid: true,
@@ -204,6 +245,108 @@ export async function getPublishedPost(slug: string): Promise<FullPostData> {
   return result;
 }
 
+export async function getPostShell(slug: string): Promise<PostShellData> {
+  const getCachedData = unstable_cache(
+    async (s: string) => {
+      const post = await prisma.post.findFirst({
+        where: {
+          slug: s,
+          status: {
+            in: [...PUBLIC_POST_STATUSES],
+          },
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          content: true,
+          excerpt: true,
+          publishedAt: true,
+          createdAt: true,
+          updatedAt: true,
+          metaDescription: true,
+          metaKeywords: true,
+          robotsIndex: true,
+          allowComments: true,
+          license: true,
+          accessMode: true,
+          minRole: true,
+          categories: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+          tags: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
+          _count: {
+            select: {
+              comments: {
+                where: {
+                  status: "APPROVED",
+                  deletedAt: null,
+                },
+              },
+            },
+          },
+          viewCount: {
+            select: {
+              cachedCount: true,
+            },
+          },
+          author: {
+            select: {
+              uid: true,
+              username: true,
+              nickname: true,
+            },
+          },
+          mediaRefs: {
+            include: {
+              media: {
+                select: {
+                  shortHash: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!post) {
+        return null;
+      }
+
+      const { mediaRefs, content, viewCount, ...rest } = post;
+      return {
+        ...rest,
+        featuredImage: getFeaturedImageUrl(mediaRefs),
+        contentLength: content.length,
+        viewCount: viewCount?.cachedCount || 0,
+      };
+    },
+    [`post-shell-${slug}`],
+    {
+      tags: ["posts/list", `posts/${slug}`],
+      revalidate: false,
+    },
+  );
+
+  const result = await getCachedData(slug);
+
+  if (!result) {
+    notFound();
+  }
+
+  return result;
+}
+
 export async function getLatestPublishedPostsForJsonLd(
   limit: number = 10,
 ): Promise<LatestPostJsonLdItem[]> {
@@ -214,8 +357,7 @@ export async function getLatestPublishedPostsForJsonLd(
     async (take: number) => {
       const posts = await prisma.post.findMany({
         where: {
-          status: "PUBLISHED",
-          deletedAt: null,
+          ...LISTABLE_POST_PUBLISHED_WHERE,
         },
         select: {
           title: true,
@@ -368,7 +510,10 @@ export async function getAdjacentPosts(
     async (slug: string) => {
       // 首先获取当前文章的发布时间
       const currentPost = await prisma.post.findUnique({
-        where: { slug },
+        where: {
+          slug,
+          ...LISTABLE_POST_VISIBLE_WHERE,
+        },
         select: { publishedAt: true },
       });
 
@@ -377,10 +522,7 @@ export async function getAdjacentPosts(
       }
 
       const baseWhere = {
-        status: {
-          in: PUBLIC_POST_STATUSES,
-        },
-        deletedAt: null,
+        ...LISTABLE_POST_VISIBLE_WHERE,
         publishedAt: { not: null },
       };
 
@@ -502,7 +644,7 @@ export async function getAdjacentPosts(
  * 推荐维度：分类、标签
  */
 export async function getRecommendedPosts(
-  currentPost: FullPostData,
+  currentPost: Pick<FullPostData, "slug" | "categories" | "tags">,
   options?: {
     limit?: number;
     candidateLimit?: number;
@@ -578,10 +720,7 @@ export async function getRecommendedPosts(
       };
 
       const baseWhere = {
-        status: {
-          in: PUBLIC_POST_STATUSES,
-        },
-        deletedAt: null,
+        ...LISTABLE_POST_VISIBLE_WHERE,
       };
 
       const relationWhereClauses: Array<Record<string, unknown>> = [];

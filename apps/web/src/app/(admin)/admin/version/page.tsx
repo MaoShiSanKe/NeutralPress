@@ -8,6 +8,7 @@ import { RiBookLine } from "@remixicon/react";
 import AutoUpdateDialogButton from "@/app/(admin)/admin/version/AutoUpdateDialogButton";
 import ContributorsBouncer from "@/app/(admin)/admin/version/ContributorsBouncer";
 import ScrollGradientMask from "@/app/(admin)/admin/version/ScrollGradientMask";
+import BrowserDateTime from "@/components/client/BrowserDateTime";
 import AdminSidebar from "@/components/client/layout/AdminSidebar";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
@@ -41,20 +42,6 @@ export const metadata = await generateMetadata(
     pathname: "/admin/version",
   },
 );
-
-function formatDateTime(value: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "-";
-  return date.toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
 
 function getReleaseDate(
   release: Pick<GithubRelease, "publishedAt" | "createdAt">,
@@ -416,8 +403,12 @@ export default async function AdminVersionPage() {
                         )}
                       </span>
                       <span>
-                        {versionMatchedRelease &&
-                          formatDateTime(getReleaseDate(versionMatchedRelease))}
+                        {versionMatchedRelease && (
+                          <BrowserDateTime
+                            value={getReleaseDate(versionMatchedRelease)}
+                            precision="second"
+                          />
+                        )}
                       </span>
                     </div>
                   </div>
@@ -571,7 +562,10 @@ export default async function AdminVersionPage() {
                           <div className="space-y-1 text-sm border-b border-border pb-4 mb-4">
                             <div>
                               发布时间：
-                              {formatDateTime(getReleaseDate(release))}
+                              <BrowserDateTime
+                                value={getReleaseDate(release)}
+                                precision="second"
+                              />
                             </div>
                             <div>发布者：{release.authorLogin || "-"}</div>
                             <div>

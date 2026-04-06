@@ -22,6 +22,7 @@ import { BackupArchiveSchema } from "@repo/shared-types/api/backup";
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 
 import { buildObjectKey, uploadObject } from "@/lib/server/oss";
+import { normalizeBackupPostRow } from "@/lib/server/post-access";
 import prisma, { type PrismaTransaction } from "@/lib/server/prisma";
 import { fetchPublicHttpUrlBuffer } from "@/lib/server/url-security";
 import type { StorageProviderType } from "@/template/storages";
@@ -2395,7 +2396,7 @@ async function replaceContentScope(
     const rightDepth = readNumber(right, "depth") ?? 0;
     return leftDepth - rightDepth;
   });
-  const posts = getRows(data, "posts");
+  const posts = getRows(data, "posts").map(normalizeBackupPostRow);
   const postTagLinks = getRows(data, "postTagLinks");
   const postCategoryLinks = getRows(data, "postCategoryLinks");
   const comments = [...getRows(data, "comments")].sort((left, right) => {

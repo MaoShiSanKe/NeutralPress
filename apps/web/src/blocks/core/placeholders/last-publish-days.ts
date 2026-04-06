@@ -1,3 +1,4 @@
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 /**
@@ -11,10 +12,7 @@ export async function lastPublishDaysInterpolator(
 ): Promise<Record<string, unknown>> {
   // 获取最后一篇更新文章的时间
   const lastUpdatedPost = await prisma.post.findFirst({
-    where: {
-      status: "PUBLISHED",
-      deletedAt: null,
-    },
+    where: LISTABLE_POST_PUBLISHED_WHERE,
     orderBy: { updatedAt: "desc" },
     select: { updatedAt: true },
   });

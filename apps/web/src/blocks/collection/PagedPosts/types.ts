@@ -16,6 +16,7 @@ export interface PagedPostsBlockConfig extends BaseBlockConfig {
 export interface PostItem {
   title: string;
   slug: string;
+  accessMode?: "PUBLIC" | "ROLE" | "PASSWORD";
   excerpt: string | null;
   isPinned: boolean;
   publishedAt: Date | null;

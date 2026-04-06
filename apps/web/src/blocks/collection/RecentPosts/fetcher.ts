@@ -6,6 +6,7 @@ import {
   getFeaturedImageUrl,
   mediaRefsInclude,
 } from "@/lib/server/media-reference";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 import { processImageUrl } from "@/lib/shared/image-common";
 import { MEDIA_SLOTS } from "@/types/media";
@@ -31,8 +32,7 @@ export async function postsFetcher(config: RuntimeBlockInput) {
 
   // 构建查询条件
   const where: Record<string, unknown> = {
-    status: "PUBLISHED",
-    deletedAt: null,
+    ...LISTABLE_POST_PUBLISHED_WHERE,
   };
 
   if (onlyWithCover) {
@@ -64,6 +64,7 @@ export async function postsFetcher(config: RuntimeBlockInput) {
     select: {
       title: true,
       slug: true,
+      accessMode: true,
       excerpt: true,
       isPinned: true,
       publishedAt: true,

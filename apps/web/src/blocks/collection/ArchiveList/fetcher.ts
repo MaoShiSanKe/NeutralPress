@@ -5,6 +5,7 @@ import type {
   ArchiveListSortMode,
 } from "@/blocks/collection/ArchiveList/types";
 import type { RuntimeBlockInput } from "@/blocks/core/definition";
+import { LISTABLE_POST_VISIBLE_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 const DEFAULT_SORT: ArchiveListSortMode = "publishedAt_desc";
@@ -40,10 +41,7 @@ export async function archiveListBlockFetcher(
   try {
     const posts = await prisma.post.findMany({
       where: {
-        status: {
-          in: ["PUBLISHED", "ARCHIVED"],
-        },
-        deletedAt: null,
+        ...LISTABLE_POST_VISIBLE_WHERE,
         publishedAt: {
           not: null,
         },

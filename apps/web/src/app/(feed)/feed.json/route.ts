@@ -1,5 +1,4 @@
 import { cacheLife, cacheTag } from "next/cache";
-import { notFound } from "next/navigation";
 
 import { getFeedData } from "@/lib/server/feed-data";
 
@@ -31,7 +30,7 @@ interface JsonFeed {
 
 async function generateJsonFeed(): Promise<JsonFeed | null> {
   "use cache";
-  cacheTag("posts", "config");
+  cacheTag("posts/list", "config");
   cacheLife("max");
 
   const { posts, siteConfig, rssConfig } = await getFeedData();
@@ -99,7 +98,12 @@ export async function GET() {
   const feed = await generateJsonFeed();
 
   if (feed === null) {
-    return notFound();
+    return new Response("JSON Feed is disabled", {
+      status: 404,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+      },
+    });
   }
 
   return new Response(JSON.stringify(feed, null, 2), {

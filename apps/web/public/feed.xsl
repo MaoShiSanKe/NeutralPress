@@ -283,9 +283,6 @@
                     <xsl:when test="string-length(normalize-space(contentPreview)) &gt; 0">
                       <xsl:value-of select="normalize-space(contentPreview)" />
                     </xsl:when>
-                    <xsl:when test="string-length(normalize-space(content:encoded)) &gt; 0">
-                      <xsl:value-of select="normalize-space(content:encoded)" />
-                    </xsl:when>
                     <xsl:otherwise />
                   </xsl:choose>
                 </xsl:variable>

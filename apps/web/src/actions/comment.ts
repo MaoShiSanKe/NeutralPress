@@ -64,6 +64,7 @@ import {
   normalizePageSlug,
   resolvePageAllowComments,
 } from "@/lib/server/page-comments";
+import { PUBLIC_POST_STATUSES } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
@@ -197,7 +198,13 @@ async function loadCommentTarget(
   }
 
   const post = await prisma.post.findUnique({
-    where: { slug, status: "PUBLISHED", deletedAt: null },
+    where: {
+      slug,
+      status: {
+        in: [...PUBLIC_POST_STATUSES],
+      },
+      deletedAt: null,
+    },
     select: {
       id: true,
       slug: true,

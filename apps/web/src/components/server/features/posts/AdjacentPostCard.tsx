@@ -1,8 +1,8 @@
 import { RiArrowLeftLine, RiArrowRightLine, RiHashtag } from "@remixicon/react";
 
+import BrowserDateTime from "@/components/client/BrowserDateTime";
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
-import { formatDateWithDots } from "@/lib/shared/date-format";
 
 interface AdjacentPostCardProps {
   title: string;
@@ -117,7 +117,13 @@ export default function AdjacentPostCard({
 
           {/* 日期与分类 (现在在最下方) */}
           <div className="flex flex-wrap gap-x-3 gap-y-1 uppercase">
-            {date && <span>{formatDateWithDots(date)}</span>}
+            {date && (
+              <BrowserDateTime
+                value={date}
+                precision="date"
+                displayStyle="dots"
+              />
+            )}
             {category && category.length > 0 && (
               <span>{category.map((cat) => cat.name).join(" / ")}</span>
             )}

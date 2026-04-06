@@ -1,5 +1,6 @@
 import "server-only";
 
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 const BASE_CACHE_TAGS = [
@@ -84,8 +85,7 @@ export async function collectBootstrapTags(): Promise<string[]> {
     }),
     prisma.post.findMany({
       where: {
-        status: "PUBLISHED",
-        deletedAt: null,
+        ...LISTABLE_POST_PUBLISHED_WHERE,
       },
       select: {
         slug: true,

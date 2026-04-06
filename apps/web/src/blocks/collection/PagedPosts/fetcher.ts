@@ -11,8 +11,11 @@ import {
 } from "@/lib/server/category-utils";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 import { processImageUrl } from "@/lib/shared/image-common";
+
+import type { Prisma } from ".prisma/client";
 
 /**
  * PagedPostsBlock Fetcher
@@ -101,17 +104,11 @@ async function fetchPostsByFilter(
 ): Promise<{ posts: PostItem[]; totalPosts: number }> {
   // 构建查询条件
   // 对于分类，需要包含所有子孙分类的文章
-  let where: {
-    status: "PUBLISHED";
-    deletedAt: null;
-    tags?: { some: { slug: string } };
-    categories?: { some: { id: { in: number[] } } };
-  };
+  let where: Prisma.PostWhereInput;
 
   if (filterBy === "tag") {
     where = {
-      status: "PUBLISHED",
-      deletedAt: null,
+      ...LISTABLE_POST_PUBLISHED_WHERE,
       tags: { some: { slug } },
     };
   } else {
@@ -126,8 +123,7 @@ async function fetchPostsByFilter(
       const allIds = [parentCategory.id, ...descendantIds];
 
       where = {
-        status: "PUBLISHED",
-        deletedAt: null,
+        ...LISTABLE_POST_PUBLISHED_WHERE,
         categories: { some: { id: { in: allIds } } },
       };
     } else {
@@ -157,6 +153,7 @@ async function fetchPostsByFilter(
               select: {
                 title: true,
                 slug: true,
+                accessMode: true,
                 excerpt: true,
                 isPinned: true,
                 publishedAt: true,
@@ -200,6 +197,7 @@ async function fetchPostsByFilter(
               select: {
                 title: true,
                 slug: true,
+                accessMode: true,
                 excerpt: true,
                 isPinned: true,
                 publishedAt: true,
@@ -254,6 +252,7 @@ async function fetchPostsByFilter(
               select: {
                 title: true,
                 slug: true,
+                accessMode: true,
                 excerpt: true,
                 isPinned: true,
                 publishedAt: true,
@@ -296,6 +295,7 @@ async function fetchPostsByFilter(
           select: {
             title: true,
             slug: true,
+            accessMode: true,
             excerpt: true,
             isPinned: true,
             publishedAt: true,
@@ -374,6 +374,7 @@ async function fetchPostsByFilter(
     return {
       title: post.title,
       slug: post.slug,
+      accessMode: post.accessMode,
       excerpt: post.excerpt,
       isPinned: post.isPinned,
       publishedAt: post.publishedAt,
@@ -396,9 +397,8 @@ async function fetchAllPosts(
   sortOrder: "asc" | "desc",
 ): Promise<{ posts: PostItem[]; totalPosts: number }> {
   // 构建查询条件（只获取已发布且未删除的文章）
-  const where = {
-    status: "PUBLISHED" as const,
-    deletedAt: null,
+  const where: Prisma.PostWhereInput = {
+    ...LISTABLE_POST_PUBLISHED_WHERE,
   };
 
   // 构建排序条件
@@ -422,6 +422,7 @@ async function fetchAllPosts(
               select: {
                 title: true,
                 slug: true,
+                accessMode: true,
                 excerpt: true,
                 isPinned: true,
                 publishedAt: true,
@@ -465,6 +466,7 @@ async function fetchAllPosts(
               select: {
                 title: true,
                 slug: true,
+                accessMode: true,
                 excerpt: true,
                 isPinned: true,
                 publishedAt: true,
@@ -519,6 +521,7 @@ async function fetchAllPosts(
               select: {
                 title: true,
                 slug: true,
+                accessMode: true,
                 excerpt: true,
                 isPinned: true,
                 publishedAt: true,
@@ -561,6 +564,7 @@ async function fetchAllPosts(
           select: {
             title: true,
             slug: true,
+            accessMode: true,
             excerpt: true,
             isPinned: true,
             publishedAt: true,
@@ -639,6 +643,7 @@ async function fetchAllPosts(
     return {
       title: post.title,
       slug: post.slug,
+      accessMode: post.accessMode,
       excerpt: post.excerpt,
       isPinned: post.isPinned,
       publishedAt: post.publishedAt,
@@ -672,10 +677,7 @@ async function getMostPopularSlug(
         },
         where: {
           posts: {
-            some: {
-              status: "PUBLISHED",
-              deletedAt: null,
-            },
+            some: LISTABLE_POST_PUBLISHED_WHERE,
           },
         },
       });
@@ -693,10 +695,7 @@ async function getMostPopularSlug(
         },
         where: {
           posts: {
-            some: {
-              status: "PUBLISHED",
-              deletedAt: null,
-            },
+            some: LISTABLE_POST_PUBLISHED_WHERE,
           },
         },
       });

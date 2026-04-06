@@ -7,6 +7,7 @@ import sharp from "sharp";
 import { getConfigs } from "@/lib/server/config-cache";
 import { generateSignature } from "@/lib/server/image-crypto";
 import { getMatchingPage } from "@/lib/server/page-cache";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 import {
   interpolateSeoTemplate,
@@ -466,8 +467,7 @@ async function resolvePostSnapshot(
   const post = await prisma.post.findUnique({
     where: {
       slug,
-      status: "PUBLISHED",
-      deletedAt: null,
+      ...LISTABLE_POST_PUBLISHED_WHERE,
     },
     select: {
       title: true,

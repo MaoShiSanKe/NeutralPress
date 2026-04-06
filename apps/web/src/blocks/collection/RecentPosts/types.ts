@@ -24,6 +24,7 @@ export interface PostsData {
   displayPosts: Array<{
     title: string;
     slug: string;
+    accessMode?: "PUBLIC" | "ROLE" | "PASSWORD";
     isPinned: boolean;
     publishedAt: string | Date | null;
     categories: { name: string; slug: string }[];

@@ -9,8 +9,12 @@ import { useBroadcast } from "@/hooks/use-broadcast";
  * 评论数显示组件
  * 通过广播接收评论数并显示
  */
-export default function CommentCount() {
-  const [count, setCount] = useState<number | null>(null);
+export default function CommentCount({
+  initialCount = null,
+}: {
+  initialCount?: number | null;
+}) {
+  const [count, setCount] = useState<number | null>(initialCount);
 
   // 监听评论数广播
   useBroadcast((message: { type: string; count?: number }) => {

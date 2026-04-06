@@ -1215,15 +1215,15 @@ export async function searchPosts(
     // 参数索引偏移：搜索相关参数占用了 $1, $2, $3
     // 如果有 status，它是 $4
     const statusFilter = status ? ` AND "status" = $4` : "";
-    const fullWhereClause = `${whereClause}${statusFilter} AND "deletedAt" IS NULL`;
+    const fullWhereClause = `${whereClause}${statusFilter} AND "deletedAt" IS NULL AND "accessMode" = 'PUBLIC'`;
 
     // 5. 计算总数
     // count 查询只需要 $1 (OR query) 和 status (如果有)
     const countQuery = `
-      SELECT COUNT(*)::bigint as count
-      FROM "Post"
-      WHERE ${whereClause}${status ? ` AND "status" = $2` : ""} AND "deletedAt" IS NULL
-    `;
+        SELECT COUNT(*)::bigint as count
+        FROM "Post"
+        WHERE ${whereClause}${status ? ` AND "status" = $2` : ""} AND "deletedAt" IS NULL AND "accessMode" = 'PUBLIC'
+      `;
 
     const countParams = status ? [orQueryStr, status] : [orQueryStr];
 
@@ -1332,6 +1332,7 @@ export async function searchPosts(
     const posts = await prisma.post.findMany({
       where: {
         id: { in: postIds },
+        accessMode: "PUBLIC",
       },
       select: {
         id: true,

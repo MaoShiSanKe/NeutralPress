@@ -3,6 +3,58 @@
  * 统一处理 MDX 和 Markdown 模式下的标题 ID 生成
  */
 
+interface HastLikeNode {
+  type?: string;
+  tagName?: string;
+  value?: string;
+  properties?: Record<string, unknown>;
+  children?: HastLikeNode[];
+}
+
+function extractHeadingPlainText(node: HastLikeNode | undefined): string {
+  if (!node) {
+    return "";
+  }
+
+  if (node.type === "text" && typeof node.value === "string") {
+    return node.value;
+  }
+
+  return (node.children || [])
+    .map((child) => extractHeadingPlainText(child))
+    .join("");
+}
+
+export function rehypeStableHeadingIds() {
+  return (tree: HastLikeNode) => {
+    const headingProcessor = createHeadingProcessor();
+
+    const visit = (node: HastLikeNode | undefined) => {
+      if (!node) {
+        return;
+      }
+
+      if (
+        node.type === "element" &&
+        typeof node.tagName === "string" &&
+        /^h[1-6]$/i.test(node.tagName)
+      ) {
+        const text = extractHeadingPlainText(node).trim();
+        node.properties = {
+          ...(node.properties || {}),
+          id: headingProcessor.generateSlug(text),
+        };
+      }
+
+      for (const child of node.children || []) {
+        visit(child);
+      }
+    };
+
+    visit(tree);
+  };
+}
+
 /**
  * 生成带数字后缀的 slug（避免 CSS 选择器问题）
  * 使用闭包避免全局状态污染

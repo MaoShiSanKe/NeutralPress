@@ -52,18 +52,9 @@ export default function PagedPostsBlock({ block }: BlockComponentProps) {
                       <PostCard
                         title={post.title}
                         slug={post.slug}
+                        accessMode={post.accessMode}
                         isPinned={post.isPinned}
-                        date={
-                          post.publishedAt
-                            ? new Date(post.publishedAt)
-                                .toLocaleDateString("zh-CN", {
-                                  year: "numeric",
-                                  month: "2-digit",
-                                  day: "2-digit",
-                                })
-                                .replace(/\//g, "/")
-                            : ""
-                        }
+                        date={post.publishedAt}
                         category={post.categories}
                         tags={post.tags}
                         cover={post.coverData}

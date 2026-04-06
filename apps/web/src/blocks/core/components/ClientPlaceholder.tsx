@@ -2,8 +2,10 @@
 
 import { useMemo } from "react";
 
+import BrowserDateTime from "@/components/client/BrowserDateTime";
+
 export interface ClientPlaceholderProps {
-  type: "relative-time";
+  type: "relative-time" | "date";
   data: string; // ISO 时间字符串
 }
 
@@ -15,6 +17,11 @@ export function ClientPlaceholder({ type, data }: ClientPlaceholderProps) {
   if (type === "relative-time") {
     return <RelativeTime date={new Date(data)} />;
   }
+
+  if (type === "date") {
+    return <BrowserDateTime value={data} precision="date" />;
+  }
+
   return null;
 }
 

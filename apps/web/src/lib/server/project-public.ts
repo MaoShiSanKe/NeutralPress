@@ -1,11 +1,13 @@
 import "server-only";
 
+import type { PostTocItem } from "@repo/shared-types/api/post";
 import { unstable_cache } from "next/cache";
 import { notFound } from "next/navigation";
 
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import { getAllFeaturedImageUrls } from "@/lib/server/media-reference";
 import prisma from "@/lib/server/prisma";
+import { buildTocFromSource } from "@/lib/server/rich-text-outline";
 import {
   extractInternalHashes,
   type MediaFileInfo,
@@ -115,6 +117,7 @@ export interface PublicProjectDetail {
     slug: string;
   }>;
   coverImages: ProcessedImageData[];
+  tocItems: PostTocItem[];
 }
 
 export async function getPublishedProjectStaticParams(
@@ -328,6 +331,11 @@ export async function getPublishedProjectDetail(slug: string): Promise<{
         slug: tag.slug,
       })),
       coverImages,
+      tocItems: buildTocFromSource({
+        source: project.content || "",
+        mode: "markdown",
+        skipFirstH1: true,
+      }),
     },
     mediaFileMap,
   };

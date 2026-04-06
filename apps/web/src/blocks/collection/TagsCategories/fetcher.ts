@@ -1,4 +1,5 @@
 import type { RuntimeBlockInput } from "@/blocks/core/definition";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 // 定义通用返回类型，方便前端使用
@@ -14,8 +15,7 @@ export async function tagsCategoriesFetcher(_config: RuntimeBlockInput) {
   // 统一过滤条件：只统计未删除且已发布文章
   // 注意：上一段代码中你用了 status: "PUBLISHED"，这里建议保持一致
   const postFilter = {
-    deletedAt: null,
-    status: "PUBLISHED" as const,
+    ...LISTABLE_POST_PUBLISHED_WHERE,
   };
 
   const [tags, allCategories] = await Promise.all([

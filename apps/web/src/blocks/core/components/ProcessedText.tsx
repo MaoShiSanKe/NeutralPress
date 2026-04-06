@@ -131,10 +131,14 @@ export function ProcessedText({
       // 检查是否为 ISO 日期字符串
       const dateValue = data[field] as string;
       if (dateValue.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
-        // 为 lastPublishDays 和 firstPublishAt 创建相对时间组件
-        if (field === "lastPublishDays" || field === "firstPublishAt") {
+        if (field === "lastPublishDays") {
           enhancedData[field] = React.createElement(ClientPlaceholder, {
             type: "relative-time",
+            data: dateValue,
+          });
+        } else if (field === "firstPublishAt") {
+          enhancedData[field] = React.createElement(ClientPlaceholder, {
+            type: "date",
             data: dateValue,
           });
         }

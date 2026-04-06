@@ -1,6 +1,11 @@
 /**
  * 默认配置定义
  */
+import {
+  DEFAULT_SITE_FONT_SCALE_PERCENT,
+  MAX_SITE_FONT_SCALE_PERCENT,
+  MIN_SITE_FONT_SCALE_PERCENT,
+} from "@/lib/shared/font-scale";
 import { DEFAULT_SITE_COLOR_CONFIG } from "@/lib/shared/site-color";
 
 // Prisma Json 类型定义
@@ -8,13 +13,44 @@ type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
 type JsonObject = { [key: string]: JsonValue };
 type JsonArray = JsonValue[];
 
+export interface ConfigOption {
+  label: string;
+  value: string | number;
+}
+
+export interface ConfigInputAttributes {
+  min?: number;
+  max?: number;
+  step?: number;
+  tips?: string;
+}
+
+export interface ConfigValidationRules {
+  min?: number;
+  max?: number;
+  integer?: boolean;
+}
+
+export interface ConfigMeta {
+  options?: ConfigOption[];
+  input?: ConfigInputAttributes;
+  validation?: ConfigValidationRules;
+}
+
+type ConfigMetadataKey = "description" | "meta";
+
+const CONFIG_METADATA_KEYS = new Set<ConfigMetadataKey>([
+  "description",
+  "meta",
+]);
+
 /**
  * 所有配置项的结构化定义
  *
  * 结构说明：
  * - 每个配置项必须包含 `default` 键，作为该配置的主值。
- * - `description` 是保留键，用于存储配置描述。
- * - 也可以定义其他键，它们将作为 `default` 的兄弟字段存储在 JSON 中。
+ * - `description` 与 `meta` 为元数据键，仅用于后台表单和校验，不会写入配置值。
+ * - 其他未保留的键会作为 `default` 的兄弟字段存储在 JSON 中。
  */
 export const CONFIG_DEFINITIONS = {
   // =====================================
@@ -42,6 +78,23 @@ export const CONFIG_DEFINITIONS = {
   "site.color": {
     default: DEFAULT_SITE_COLOR_CONFIG,
     description: "站点主题颜色变量。亮色/暗色独立配置，支持hex 或 oklch",
+  },
+  "site.font.scalePercent": {
+    default: DEFAULT_SITE_FONT_SCALE_PERCENT,
+    description:
+      "全站字体缩放百分比。100=默认大小，120=在当前响应式字号基础上增大20%。建议范围 90-120，允许输入 50-200。",
+    meta: {
+      input: {
+        min: MIN_SITE_FONT_SCALE_PERCENT,
+        max: MAX_SITE_FONT_SCALE_PERCENT,
+        step: 1,
+      },
+      validation: {
+        min: MIN_SITE_FONT_SCALE_PERCENT,
+        max: MAX_SITE_FONT_SCALE_PERCENT,
+        integer: true,
+      },
+    },
   },
   "site.shiki.theme": {
     default: {
@@ -168,7 +221,7 @@ export const CONFIG_DEFINITIONS = {
       "是否需要用户注册后验证邮箱。需要设置相关环境变量以配置电子邮件发送服务，详见文档",
   },
   "user.sso.google.enabled": {
-    default: false,
+    default: false as boolean,
     description:
       "是否启用 Google SSO 登录，详见 https://neutralpress.net/docs/settings/sso",
   },
@@ -180,7 +233,7 @@ export const CONFIG_DEFINITIONS = {
     description: "Google OAuth 配置参数",
   },
   "user.sso.github.enabled": {
-    default: false,
+    default: false as boolean,
     description:
       "是否启用 GitHub SSO 登录，详见 https://neutralpress.net/docs/settings/sso",
   },
@@ -192,7 +245,7 @@ export const CONFIG_DEFINITIONS = {
     description: "GitHub OAuth 配置参数",
   },
   "user.sso.microsoft.enabled": {
-    default: false,
+    default: false as boolean,
     description:
       "是否启用 Microsoft SSO 登录，详见 https://neutralpress.net/docs/settings/sso",
   },
@@ -225,40 +278,42 @@ export const CONFIG_DEFINITIONS = {
       | "cc-by-nc"
       | "cc-by-nc-sa"
       | "cc-by-nc-nd",
-    options: [
-      {
-        value: "all-rights-reserved",
-        label: "All Rights Reserved - 保留所有权利 - 未经授权禁止转载或使用",
-      },
-      {
-        value: "cc-0",
-        label: "CC0",
-      },
-      {
-        value: "cc-by",
-        label: "CC BY - 署名",
-      },
-      {
-        value: "cc-by-sa",
-        label: "CC BY-SA - 署名 - 以相同方式分享",
-      },
-      {
-        value: "cc-by-nd",
-        label: "CC BY-ND - 署名 - 不可改作",
-      },
-      {
-        value: "cc-by-nc",
-        label: "CC BY-NC - 署名 - 不可商用",
-      },
-      {
-        value: "cc-by-nc-sa",
-        label: "CC BY-NC-SA - 署名 - 不可商用 - 以相同方式分享",
-      },
-      {
-        value: "cc-by-nc-nd",
-        label: "CC BY-NC-ND - 署名 - 不可商用 - 禁止改作",
-      },
-    ],
+    meta: {
+      options: [
+        {
+          value: "all-rights-reserved",
+          label: "All Rights Reserved - 保留所有权利 - 未经授权禁止转载或使用",
+        },
+        {
+          value: "cc-0",
+          label: "CC0",
+        },
+        {
+          value: "cc-by",
+          label: "CC BY - 署名",
+        },
+        {
+          value: "cc-by-sa",
+          label: "CC BY-SA - 署名 - 以相同方式分享",
+        },
+        {
+          value: "cc-by-nd",
+          label: "CC BY-ND - 署名 - 不可改作",
+        },
+        {
+          value: "cc-by-nc",
+          label: "CC BY-NC - 署名 - 不可商用",
+        },
+        {
+          value: "cc-by-nc-sa",
+          label: "CC BY-NC-SA - 署名 - 不可商用 - 以相同方式分享",
+        },
+        {
+          value: "cc-by-nc-nd",
+          label: "CC BY-NC-ND - 署名 - 不可商用 - 禁止改作",
+        },
+      ],
+    },
     description: "文章默认版权声明许可证，详情参考文章编辑器中的版权声明选项",
   },
   "content.license.textTemplate": {
@@ -349,10 +404,12 @@ export const CONFIG_DEFINITIONS = {
   },
   "media.gallery.sortOrder": {
     default: "desc" as "asc" | "desc",
-    options: [
-      { value: "desc", label: "最新在前 (desc)" },
-      { value: "asc", label: "最早在前 (asc)" },
-    ],
+    meta: {
+      options: [
+        { value: "desc", label: "最新在前 (desc)" },
+        { value: "asc", label: "最早在前 (asc)" },
+      ],
+    },
     description:
       "画廊页面照片的排序顺序，最新照片在前（desc）或最早照片在前（asc）",
   },
@@ -658,12 +715,14 @@ export const CONFIG_DEFINITIONS = {
   },
   "cron.task.analytics.report.mode": {
     default: "NONE" as "NONE" | "NOTICE" | "EMAIL" | "NOTICE_EMAIL",
-    options: [
-      { value: "NONE", label: "不发送报告" },
-      { value: "NOTICE", label: "仅通知" },
-      { value: "EMAIL", label: "仅邮件" },
-      { value: "NOTICE_EMAIL", label: "通知 + 邮件" },
-    ],
+    meta: {
+      options: [
+        { value: "NONE", label: "不发送报告" },
+        { value: "NOTICE", label: "仅通知" },
+        { value: "EMAIL", label: "仅邮件" },
+        { value: "NOTICE_EMAIL", label: "通知 + 邮件" },
+      ],
+    },
     description: "访问统计整理后，管理员报告发送方式",
   },
   "cron.task.analytics.report.daily.enable": {
@@ -736,10 +795,12 @@ export const CONFIG_DEFINITIONS = {
   // =====================================
   "autoupdate.mode": {
     default: "REPOSITORY" as "REPOSITORY" | "CONTAINER",
-    options: [
-      { value: "REPOSITORY", label: "仓库更新" },
-      { value: "CONTAINER", label: "容器更新" },
-    ],
+    meta: {
+      options: [
+        { value: "REPOSITORY", label: "仓库更新" },
+        { value: "CONTAINER", label: "容器更新" },
+      ],
+    },
     description:
       "自动更新模式。REPOSITORY=同步 GitHub 仓库，CONTAINER=触发容器更新",
   },
@@ -851,6 +912,20 @@ export type ConfigType<K extends ConfigKeys> = ConfigTypes[K];
  */
 export type ConfigTypeMap = ConfigTypes;
 
+export function getConfigDefinition<K extends ConfigKeys>(
+  key: K,
+): (typeof CONFIG_DEFINITIONS)[K];
+export function getConfigDefinition(
+  key: string,
+): (typeof CONFIG_DEFINITIONS)[ConfigKeys] | undefined;
+export function getConfigDefinition(key: string) {
+  if (!(key in CONFIG_DEFINITIONS)) {
+    return undefined;
+  }
+
+  return CONFIG_DEFINITIONS[key as ConfigKeys];
+}
+
 /**
  * 数据库初始化的配置项结构
  */
@@ -860,18 +935,30 @@ export interface DefaultConfig {
   description?: string;
 }
 
+function extractStoredConfigValue(
+  definition: Record<string, unknown>,
+): JsonValue {
+  return Object.fromEntries(
+    Object.entries(definition).filter(
+      ([key]) => !CONFIG_METADATA_KEYS.has(key as ConfigMetadataKey),
+    ),
+  ) as JsonValue;
+}
+
 /**
  * 计算生成的 defaultConfigs 数组
  * 用于初次运行时写入数据库。
- * 将定义中除了 description 以外的所有字段作为 JSON 对象存入 value。
+ * 将定义中除元数据键外的字段作为 JSON 对象存入 value。
  */
 export const defaultConfigs: DefaultConfig[] = (
   Object.keys(CONFIG_DEFINITIONS) as ConfigKeys[]
 ).map((key) => {
-  const { description, ...values } = CONFIG_DEFINITIONS[key];
+  const { description } = CONFIG_DEFINITIONS[key];
   return {
     key,
-    value: values as JsonValue,
+    value: extractStoredConfigValue(
+      CONFIG_DEFINITIONS[key] as Record<string, unknown>,
+    ),
     description,
   };
 });
@@ -884,11 +971,6 @@ export const defaultConfigMap = new Map<string, JsonValue>();
 
 // 初始化 Map
 defaultConfigs.forEach((c) => defaultConfigMap.set(c.key, c.value));
-
-export interface ConfigOption {
-  label: string;
-  value: string | number;
-}
 
 // 提取 default 字段的值
 export const extractDefaultValue = (value: unknown): unknown => {
@@ -908,10 +990,53 @@ export const extractOptions = (value: unknown): ConfigOption[] | undefined => {
   if (
     typeof value === "object" &&
     value !== null &&
-    "options" in value &&
-    Array.isArray((value as { options: unknown }).options)
+    "meta" in value &&
+    typeof (value as { meta?: unknown }).meta === "object" &&
+    (value as { meta?: unknown }).meta !== null &&
+    "options" in (value as { meta: ConfigMeta }).meta &&
+    Array.isArray((value as { meta: ConfigMeta }).meta.options)
   ) {
-    return (value as { options: ConfigOption[] }).options;
+    return (value as { meta: ConfigMeta }).meta.options;
+  }
+  return undefined;
+};
+
+export const extractInputAttributes = (
+  value: unknown,
+): ConfigInputAttributes | undefined => {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "meta" in value &&
+    typeof (value as { meta?: unknown }).meta === "object" &&
+    (value as { meta?: unknown }).meta !== null &&
+    "input" in (value as { meta: ConfigMeta }).meta &&
+    typeof (value as { meta: ConfigMeta }).meta.input === "object" &&
+    (value as { meta: ConfigMeta }).meta.input !== null
+  ) {
+    return {
+      ...(value as { meta: ConfigMeta }).meta.input,
+    };
+  }
+  return undefined;
+};
+
+export const extractValidationRules = (
+  value: unknown,
+): ConfigValidationRules | undefined => {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "meta" in value &&
+    typeof (value as { meta?: unknown }).meta === "object" &&
+    (value as { meta?: unknown }).meta !== null &&
+    "validation" in (value as { meta: ConfigMeta }).meta &&
+    typeof (value as { meta: ConfigMeta }).meta.validation === "object" &&
+    (value as { meta: ConfigMeta }).meta.validation !== null
+  ) {
+    return {
+      ...(value as { meta: ConfigMeta }).meta.validation,
+    };
   }
   return undefined;
 };

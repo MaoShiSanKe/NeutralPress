@@ -9,7 +9,9 @@ import { GridItem } from "@/components/client/layout/RowGrid";
 import {
   defaultConfigs,
   extractDefaultValue,
+  extractInputAttributes,
   extractOptions,
+  getConfigDefinition,
 } from "@/data/default-configs";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
@@ -904,12 +906,17 @@ export default function SettingSheet() {
     useSelect?: boolean;
     options?: SelectOption[];
     isJsonObject?: boolean;
+    min?: number;
+    max?: number;
+    step?: number;
+    tips?: string;
   } => {
     const defaultValue = extractDefaultValue(setting.value);
 
     // 检查是否有预定义的选项 (从默认配置中获取)
-    const defaultConfig = defaultConfigs.find((c) => c.key === setting.key);
-    const predefinedOptions = extractOptions(defaultConfig?.value);
+    const configDefinition = getConfigDefinition(setting.key);
+    const predefinedOptions = extractOptions(configDefinition);
+    const inputAttributes = extractInputAttributes(configDefinition);
 
     if (predefinedOptions) {
       return {
@@ -938,6 +945,7 @@ export default function SettingSheet() {
         rows: undefined,
         useSelect: false,
         isJsonObject: false,
+        ...inputAttributes,
       };
     }
 
@@ -948,6 +956,7 @@ export default function SettingSheet() {
         rows: Math.max(3, Math.min(defaultValue.length, 10)),
         useSelect: false,
         isJsonObject: false,
+        ...inputAttributes,
       };
     }
 
@@ -958,6 +967,7 @@ export default function SettingSheet() {
         rows: undefined,
         useSelect: false,
         isJsonObject: true,
+        ...inputAttributes,
       };
     }
 
@@ -968,6 +978,7 @@ export default function SettingSheet() {
         rows: undefined,
         useSelect: false,
         isJsonObject: false,
+        ...inputAttributes,
       };
     }
 
@@ -977,6 +988,7 @@ export default function SettingSheet() {
       rows: undefined,
       useSelect: false,
       isJsonObject: false,
+      ...inputAttributes,
     };
   };
 
@@ -1163,6 +1175,10 @@ export default function SettingSheet() {
                         }
                         size="sm"
                         rows={inputConfig.rows}
+                        min={inputConfig.min}
+                        max={inputConfig.max}
+                        step={inputConfig.step}
+                        tips={inputConfig.tips}
                       />
                     )}
 

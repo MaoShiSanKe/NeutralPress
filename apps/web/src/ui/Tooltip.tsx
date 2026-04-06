@@ -36,6 +36,11 @@ export interface TooltipProps {
    * 自定义类名
    */
   className?: string;
+  /**
+   * 是否使用行内元素作为触发器包装
+   * @default false
+   */
+  inline?: boolean;
 }
 
 export function Tooltip({
@@ -47,11 +52,12 @@ export function Tooltip({
   maxWidth = "min(600px, 90vw)",
   disabled = false,
   className = "",
+  inline = false,
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [mounted, setMounted] = useState(false);
-  const triggerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement | HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const updateFrameRef = useRef<number | null>(null);
@@ -146,7 +152,7 @@ export function Tooltip({
   };
 
   const handleHoverPointerEnter = (
-    event: React.PointerEvent<HTMLDivElement>,
+    event: React.PointerEvent<HTMLDivElement | HTMLSpanElement>,
   ) => {
     // Tooltip 是 hover affordance，触摸设备不应在点击时抢占交互。
     if (event.pointerType !== "mouse") return;
@@ -154,7 +160,7 @@ export function Tooltip({
   };
 
   const handleHoverPointerLeave = (
-    event: React.PointerEvent<HTMLDivElement>,
+    event: React.PointerEvent<HTMLDivElement | HTMLSpanElement>,
   ) => {
     if (event.pointerType !== "mouse") return;
     hideTooltip();
@@ -221,15 +227,27 @@ export function Tooltip({
           onClick: toggleTooltip,
         };
 
+  const triggerClassName = className || "inline-block";
+
   return (
     <>
-      <div
-        ref={triggerRef}
-        className={className || "inline-block"}
-        {...triggerProps}
-      >
-        {children}
-      </div>
+      {inline ? (
+        <span
+          ref={triggerRef as React.RefObject<HTMLSpanElement>}
+          className={triggerClassName}
+          {...triggerProps}
+        >
+          {children}
+        </span>
+      ) : (
+        <div
+          ref={triggerRef as React.RefObject<HTMLDivElement>}
+          className={triggerClassName}
+          {...triggerProps}
+        >
+          {children}
+        </div>
+      )}
 
       {mounted &&
         createPortal(

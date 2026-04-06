@@ -5,6 +5,7 @@ import UniversalRenderer from "@/components/server/renderer/UniversalRenderer";
 import JsonLdScript from "@/components/server/seo/JsonLdScript";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import { getConfigs } from "@/lib/server/config-cache";
+import { buildTocFromSource } from "@/lib/server/rich-text-outline";
 import type { JsonLdGraph } from "@/lib/server/seo";
 
 interface PageTextContentLayoutProps {
@@ -75,7 +76,12 @@ export default async function PageTextContentLayout({
     };
   }
   const contentRootId = `page-content-${pageId}`;
-  const contentSelector = `#${contentRootId} .md-content`;
+  const articleContentId = `page-article-content-${pageId}`;
+  const contentSelector = `#${articleContentId}`;
+  const tocItems = buildTocFromSource({
+    source,
+    mode,
+  });
 
   return (
     <MainLayout type="vertical" nopadding>
@@ -104,11 +110,13 @@ export default async function PageTextContentLayout({
         <div className="mx-auto max-w-7xl px-6 pb-12 pt-10 md:px-10">
           <div className="relative flex h-full gap-6">
             <div className="min-w-0 flex-[8]">
-              <UniversalRenderer
-                source={source}
-                mode={mode}
-                shikiTheme={shikiTheme}
-              />
+              <div id={articleContentId}>
+                <UniversalRenderer
+                  source={source}
+                  mode={mode}
+                  shikiTheme={shikiTheme}
+                />
+              </div>
               {commentEnabled && commentConfig && (
                 <CommentsSection
                   slug={slug}
@@ -120,11 +128,15 @@ export default async function PageTextContentLayout({
             </div>
 
             <div className="sticky top-10 hidden h-full max-w-screen self-start lg:block lg:flex-[2]">
-              <PostToc contentSelector={contentSelector} />
+              <PostToc tocItems={tocItems} contentSelector={contentSelector} />
             </div>
 
             <div className="lg:hidden">
-              <PostToc isMobile={true} contentSelector={contentSelector} />
+              <PostToc
+                tocItems={tocItems}
+                isMobile={true}
+                contentSelector={contentSelector}
+              />
             </div>
           </div>
         </div>

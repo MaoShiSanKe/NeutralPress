@@ -118,6 +118,9 @@ export interface EditorInitialData {
   excerpt?: string;
   isPinned?: boolean;
   allowComments?: boolean;
+  accessMode?: "PUBLIC" | "ROLE" | "PASSWORD";
+  minRole?: "USER" | "ADMIN" | "EDITOR" | "AUTHOR" | null;
+  accessPasswords?: string[];
   robotsIndex?: boolean;
   metaDescription?: string;
   metaKeywords?: string;

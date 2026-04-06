@@ -43,6 +43,48 @@ export interface ToastMessage {
   progress?: number; // 进度百分比 0-100
 }
 
+function getToastCopyText(toast: ToastMessage) {
+  return [toast.title.trim(), toast.message?.trim()].filter(Boolean).join("\n");
+}
+
+async function copyTextToClipboard(text: string) {
+  if (!text) {
+    return false;
+  }
+
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // 降级到 execCommand 兜底
+    }
+  }
+
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  textarea.style.left = "-9999px";
+  textarea.style.opacity = "0";
+
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  try {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
 interface ToastContextType {
   showToast: (
     type: ToastType,
@@ -261,6 +303,26 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
     [],
   );
 
+  const handleCopy = useCallback(
+    async (toast: ToastMessage) => {
+      const copyText = getToastCopyText(toast);
+
+      if (!copyText) {
+        return;
+      }
+
+      const copied = await copyTextToClipboard(copyText);
+
+      if (copied) {
+        showToast("success", "已复制", undefined, 1500);
+        return;
+      }
+
+      showToast("error", "复制失败", "请检查浏览器剪贴板权限", 2500);
+    },
+    [showToast],
+  );
+
   return (
     <ToastContext.Provider
       value={{
@@ -276,7 +338,11 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
       }}
     >
       {children}
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <ToastContainer
+        toasts={toasts}
+        onRemove={removeToast}
+        onCopy={handleCopy}
+      />
     </ToastContext.Provider>
   );
 }
@@ -284,9 +350,10 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
 interface ToastContainerProps {
   toasts: ToastMessage[];
   onRemove: (id: string) => void;
+  onCopy: (toast: ToastMessage) => Promise<void>;
 }
 
-function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
+function ToastContainer({ toasts, onRemove, onCopy }: ToastContainerProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -302,7 +369,12 @@ function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
     <div className="fixed inset-0 z-[1000] flex flex-col justify-end items-center gap-2 p-3 pointer-events-none">
       <AnimatePresence initial={false} mode="popLayout">
         {toasts.map((toast) => (
-          <Toast key={toast.id} toast={toast} onRemove={onRemove} />
+          <Toast
+            key={toast.id}
+            toast={toast}
+            onRemove={onRemove}
+            onCopy={onCopy}
+          />
         ))}
       </AnimatePresence>
     </div>
@@ -314,6 +386,7 @@ function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
 interface ToastProps {
   toast: ToastMessage;
   onRemove: (id: string) => void;
+  onCopy: (toast: ToastMessage) => Promise<void>;
   canClose?: boolean;
 }
 
@@ -349,11 +422,12 @@ function CircularProgress({ progress }: { progress: number }) {
   );
 }
 
-function Toast({ toast, onRemove, canClose }: ToastProps) {
+function Toast({ toast, onRemove, onCopy, canClose }: ToastProps) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const dragOpacity = useMotionValue(1);
   const [isDragging, setIsDragging] = useState(false);
+  const hasDraggedRef = useRef(false);
   const [exitCustom, setExitCustom] = useState<{
     x?: number;
     y?: number;
@@ -455,7 +529,10 @@ function Toast({ toast, onRemove, canClose }: ToastProps) {
       dragDirectionLock
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.7}
-      onDragStart={() => setIsDragging(true)}
+      onDragStart={() => {
+        hasDraggedRef.current = true;
+        setIsDragging(true);
+      }}
       onDrag={() => {
         updateDragOpacity();
       }}
@@ -502,12 +579,33 @@ function Toast({ toast, onRemove, canClose }: ToastProps) {
           stiffness: 300,
           damping: 30,
         });
+
+        requestAnimationFrame(() => {
+          hasDraggedRef.current = false;
+        });
+      }}
+      onClick={() => {
+        if (hasDraggedRef.current) {
+          return;
+        }
+
+        void onCopy(toast);
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+
+        event.preventDefault();
+        void onCopy(toast);
       }}
       transition={{
         type: "spring",
         stiffness: 400,
         damping: 30,
       }}
+      role="button"
+      tabIndex={0}
       className="
         pointer-events-auto
         group
@@ -522,6 +620,7 @@ function Toast({ toast, onRemove, canClose }: ToastProps) {
         border
         border-border
         bg-background
+        cursor-copy
         p-4
         pr-6
         shadow-lg
@@ -547,9 +646,13 @@ function Toast({ toast, onRemove, canClose }: ToastProps) {
           label={toast.action.label}
           variant="ghost"
           size="sm"
-          onClick={() => {
+          onClick={(event) => {
+            event.stopPropagation();
             toast.action?.onClick();
             onRemove(toast.id);
+          }}
+          onKeyDown={(event) => {
+            event.stopPropagation();
           }}
           className="
             flex-shrink-0
@@ -562,7 +665,13 @@ function Toast({ toast, onRemove, canClose }: ToastProps) {
       )}
       {canClose && (
         <button
-          onClick={() => onRemove(toast.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove(toast.id);
+          }}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+          }}
           className="
           absolute
           right-1

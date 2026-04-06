@@ -7,6 +7,13 @@ import { createPost, updatePost } from "@/actions/post";
 import { CategoryInput } from "@/components/client/features/categories/CategoryInput";
 import { EditorCore } from "@/components/client/features/editor/EditorCore";
 import MediaSelector from "@/components/client/features/media/MediaSelector";
+import {
+  getPostAccessControlLabel,
+  normalizePasswordLines,
+  PostAccessControlFields,
+  type PostAccessFormValue,
+  validatePostAccessForm,
+} from "@/components/client/features/posts/PostAccessControlFields";
 import PostLicensePicker from "@/components/client/features/posts/PostLicensePicker";
 import type { SelectedTag } from "@/components/client/features/tags/TagInput";
 import { TagInput } from "@/components/client/features/tags/TagInput";
@@ -44,6 +51,10 @@ interface PostFormData {
   status: string;
   isPinned: boolean;
   allowComments: boolean;
+  accessMode: "PUBLIC" | "ROLE" | "PASSWORD";
+  minRole: "USER" | "ADMIN" | "EDITOR" | "AUTHOR" | null;
+  accessPasswords: string[];
+  accessPasswordText: string;
   robotsIndex: boolean;
   metaDescription: string;
   metaKeywords: string;
@@ -82,6 +93,10 @@ function createDefaultPostFormData(): PostFormData {
     status: "DRAFT",
     isPinned: false,
     allowComments: true,
+    accessMode: "PUBLIC",
+    minRole: null,
+    accessPasswords: [],
+    accessPasswordText: "",
     robotsIndex: true,
     metaDescription: "",
     metaKeywords: "",
@@ -110,6 +125,10 @@ function initializeFormData(initialData?: EditorInitialData): PostFormData {
     status: initialData.status || "DRAFT",
     isPinned: initialData.isPinned ?? false,
     allowComments: initialData.allowComments ?? true,
+    accessMode: initialData.accessMode || "PUBLIC",
+    minRole: initialData.minRole ?? null,
+    accessPasswords: initialData.accessPasswords || [],
+    accessPasswordText: (initialData.accessPasswords || []).join("\n"),
     robotsIndex: initialData.robotsIndex ?? true,
     metaDescription: initialData.metaDescription || "",
     metaKeywords: initialData.metaKeywords || "",
@@ -123,6 +142,17 @@ function initializeFormData(initialData?: EditorInitialData): PostFormData {
           isNew: false,
         }))
       : [],
+  };
+}
+
+function toPostAccessFormValue(formData: PostFormData): PostAccessFormValue {
+  return {
+    accessMode: formData.accessMode,
+    minRole: formData.minRole,
+    accessPasswords:
+      formData.accessMode === "PASSWORD"
+        ? normalizePasswordLines(formData.accessPasswordText)
+        : formData.accessPasswords,
   };
 }
 
@@ -221,6 +251,14 @@ export function PostEditorWrapper({
       return;
     }
 
+    const accessValidationMessage = validatePostAccessForm(
+      toPostAccessFormValue(formData),
+    );
+    if (accessValidationMessage) {
+      toast.error(accessValidationMessage);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       flushEditorContentSave(storageKey);
@@ -250,6 +288,14 @@ export function PostEditorWrapper({
   const handleFinalSubmit = async () => {
     if (!formData.title.trim()) {
       toast.error("请填写文章标题");
+      return;
+    }
+
+    const accessValidationMessage = validatePostAccessForm(
+      toPostAccessFormValue(formData),
+    );
+    if (accessValidationMessage) {
+      toast.error(accessValidationMessage);
       return;
     }
 
@@ -288,6 +334,12 @@ export function PostEditorWrapper({
 
       // 构建保存数据
       const tagNames = formData.tags.map((tag) => tag.name);
+      const normalizedAccessPasswords =
+        formData.accessMode === "PASSWORD"
+          ? normalizePasswordLines(formData.accessPasswordText)
+          : [];
+      const normalizedMinRole =
+        formData.accessMode === "ROLE" ? formData.minRole : null;
 
       let result;
       if (isEditMode) {
@@ -304,6 +356,9 @@ export function PostEditorWrapper({
           license: formData.license,
           isPinned: formData.isPinned,
           allowComments: formData.allowComments,
+          accessMode: formData.accessMode,
+          minRole: normalizedMinRole,
+          accessPasswords: normalizedAccessPasswords,
           metaDescription: formData.metaDescription || undefined,
           metaKeywords: formData.metaKeywords || undefined,
           robotsIndex: formData.robotsIndex,
@@ -326,6 +381,9 @@ export function PostEditorWrapper({
           license: formData.license,
           isPinned: formData.isPinned,
           allowComments: formData.allowComments,
+          accessMode: formData.accessMode,
+          minRole: normalizedMinRole,
+          accessPasswords: normalizedAccessPasswords,
           metaDescription: formData.metaDescription || undefined,
           metaKeywords: formData.metaKeywords || undefined,
           robotsIndex: formData.robotsIndex,
@@ -534,6 +592,28 @@ export function PostEditorWrapper({
         </div>
       </div>
 
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+          访问控制
+        </h3>
+        <PostAccessControlFields
+          value={toPostAccessFormValue(formData)}
+          onChange={(nextValue) =>
+            setFormData((prev) => ({
+              ...prev,
+              ...nextValue,
+            }))
+          }
+          passwordText={formData.accessPasswordText}
+          onPasswordTextChange={(nextValue) =>
+            setFormData((prev) => ({
+              ...prev,
+              accessPasswordText: nextValue,
+            }))
+          }
+        />
+      </div>
+
       {/* 版权许可 */}
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
@@ -700,6 +780,14 @@ export function PostEditorWrapper({
             </label>
             <p className="text-sm text-foreground/80">
               {formData.allowComments ? "是" : "否"}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              访问控制
+            </label>
+            <p className="text-sm text-foreground/80">
+              {getPostAccessControlLabel(formData)}
             </p>
           </div>
           <div>

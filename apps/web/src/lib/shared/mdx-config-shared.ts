@@ -9,10 +9,11 @@
 
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
-import rehypeSlug from "rehype-slug";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+
+import { rehypeStableHeadingIds } from "@/lib/shared/heading-utils";
 
 // ============ Shiki 配置 ============
 
@@ -130,7 +131,11 @@ export const markdownRemarkPlugins = [remarkGfm, remarkMath, remarkBreaks];
 /**
  * Markdown 渲染的 rehype 插件列表
  */
-export const markdownRehypePlugins = [rehypeKatex, rehypeSlug, rehypeRaw];
+export const markdownRehypePlugins = [
+  rehypeKatex,
+  rehypeStableHeadingIds,
+  rehypeRaw,
+];
 
 /**
  * MDX 渲染的 remark 插件列表
@@ -142,7 +147,7 @@ export const mdxRemarkPlugins = [remarkGfm, remarkMath];
  * MDX 渲染的 rehype 插件列表
  * 包含 rehypeKatex 以渲染 LaTeX 数学公式
  */
-export const mdxRehypePlugins = [rehypeKatex, rehypeSlug];
+export const mdxRehypePlugins = [rehypeKatex, rehypeStableHeadingIds];
 
 // ============ 工具函数 ============
 

@@ -15,7 +15,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   createContext,
   forwardRef,
@@ -36,6 +36,7 @@ import { codeToHtml } from "shiki";
 
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
+import { createHeadingProcessor } from "@/lib/shared/heading-utils";
 import {
   cleanMDXSource as cleanMDXSourceShared,
   createShikiConfig,
@@ -60,6 +61,22 @@ function extractCodeText(children?: React.ReactNode): string {
     return children
       .map((child) => (typeof child === "string" ? child : ""))
       .join("");
+  }
+
+  return "";
+}
+
+function extractHeadingText(children?: React.ReactNode): string {
+  if (typeof children === "string" || typeof children === "number") {
+    return String(children);
+  }
+
+  if (Array.isArray(children)) {
+    return children.map((child) => extractHeadingText(child)).join("");
+  }
+
+  if (React.isValidElement<{ children?: React.ReactNode }>(children)) {
+    return extractHeadingText(children.props.children);
   }
 
   return "";
@@ -307,6 +324,58 @@ export function createBaseMDXComponents(
   overrides?: Partial<MDXComponents>,
   shikiTheme?: ShikiTheme,
 ): MDXComponents {
+  const headingProcessor = createHeadingProcessor();
+  const headingComponents = {
+    h1: ({ children, id, ...props }: React.ComponentPropsWithoutRef<"h1">) => (
+      <h1
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h1>
+    ),
+    h2: ({ children, id, ...props }: React.ComponentPropsWithoutRef<"h2">) => (
+      <h2
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h2>
+    ),
+    h3: ({ children, id, ...props }: React.ComponentPropsWithoutRef<"h3">) => (
+      <h3
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h3>
+    ),
+    h4: ({ children, id, ...props }: React.ComponentPropsWithoutRef<"h4">) => (
+      <h4
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h4>
+    ),
+    h5: ({ children, id, ...props }: React.ComponentPropsWithoutRef<"h5">) => (
+      <h5
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h5>
+    ),
+    h6: ({ children, id, ...props }: React.ComponentPropsWithoutRef<"h6">) => (
+      <h6
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h6>
+    ),
+  } satisfies Partial<MDXComponents>;
+
   return {
     // 代码处理
     pre: ({ children }: { children?: React.ReactNode }) => (
@@ -359,6 +428,7 @@ export function createBaseMDXComponents(
     ),
 
     // 允许通过 overrides 扩展或覆盖
+    ...headingComponents,
     ...overrides,
   } as MDXComponents;
 }
@@ -524,6 +594,88 @@ export function createEnhancedMDXComponents(
  * @param shikiTheme 可选的 Shiki 主题配置
  */
 export function createMarkdownComponents(shikiTheme?: ShikiTheme): Components {
+  const headingProcessor = createHeadingProcessor();
+  const headingComponents = {
+    h1: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h1"> & { node?: unknown }) => (
+      <h1
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h1>
+    ),
+    h2: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h2"> & { node?: unknown }) => (
+      <h2
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h2>
+    ),
+    h3: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h3"> & { node?: unknown }) => (
+      <h3
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h3>
+    ),
+    h4: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h4"> & { node?: unknown }) => (
+      <h4
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h4>
+    ),
+    h5: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h5"> & { node?: unknown }) => (
+      <h5
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h5>
+    ),
+    h6: ({
+      children,
+      id,
+      node: _node,
+      ...props
+    }: React.ComponentPropsWithoutRef<"h6"> & { node?: unknown }) => (
+      <h6
+        {...props}
+        id={id || headingProcessor.generateSlug(extractHeadingText(children))}
+      >
+        {children}
+      </h6>
+    ),
+  } satisfies Components;
+
   return {
     // 代码处理
     pre: ({ children }: React.HTMLAttributes<HTMLPreElement>) => (
@@ -593,5 +745,6 @@ export function createMarkdownComponents(shikiTheme?: ShikiTheme): Components {
         <table {...rest}>{children}</table>
       </div>
     ),
+    ...headingComponents,
   } as Components;
 }

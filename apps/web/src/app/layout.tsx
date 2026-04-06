@@ -24,6 +24,7 @@ import Footer from "@/components/server/layout/Footer";
 // Server Components
 import Header from "@/components/server/layout/Header";
 import { ConfigProvider } from "@/context/ConfigContext";
+import type { ConfigTypeMap } from "@/data/default-configs";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
 // lib
 import { getActiveMenusForClient } from "@/lib/server/menu-cache";
@@ -72,6 +73,7 @@ export default async function RootLayout({
   cacheTag(
     "menus",
     "config/site.color",
+    "config/site.font.scalePercent",
     "config/site.title",
     "config/site.slogan.secondary",
     "config/site.avatar",
@@ -83,6 +85,9 @@ export default async function RootLayout({
     "config/notice.ably.key",
     "config/site.shiki.theme",
     "config/media.customLoader",
+    "config/user.sso.google.enabled",
+    "config/user.sso.github.enabled",
+    "config/user.sso.microsoft.enabled",
   );
   cacheLife("max");
 
@@ -91,6 +96,7 @@ export default async function RootLayout({
     menus,
     [
       mainColor,
+      fontScalePercent,
       siteName,
       siteSloganSecondary,
       siteAvatar,
@@ -102,11 +108,15 @@ export default async function RootLayout({
       ablyApiKey,
       shikiTheme,
       mediaCustomLoader,
+      googleSSOEnabled,
+      githubSSOEnabled,
+      microsoftSSOEnabled,
     ],
   ] = await Promise.all([
     getActiveMenusForClient(),
     getConfigs([
       "site.color",
+      "site.font.scalePercent",
       "site.title",
       "site.slogan.secondary",
       "site.avatar",
@@ -118,6 +128,9 @@ export default async function RootLayout({
       "notice.ably.key",
       "site.shiki.theme",
       "media.customLoader",
+      "user.sso.google.enabled",
+      "user.sso.github.enabled",
+      "user.sso.microsoft.enabled",
     ]),
   ]);
 
@@ -129,6 +142,7 @@ export default async function RootLayout({
   // 打包配置
   const configs = {
     "site.color": mainColor,
+    "site.font.scalePercent": fontScalePercent,
     "site.title": siteName,
     "site.slogan.secondary": siteSloganSecondary,
     "site.avatar": siteAvatar,
@@ -139,7 +153,10 @@ export default async function RootLayout({
     "site.shiki.theme": shikiTheme,
     "analytics.enable": enableAnalytics,
     "media.customLoader": mediaCustomLoader,
-  };
+    "user.sso.google.enabled": googleSSOEnabled,
+    "user.sso.github.enabled": githubSSOEnabled,
+    "user.sso.microsoft.enabled": microsoftSSOEnabled,
+  } as Partial<ConfigTypeMap>;
 
   return (
     <html
@@ -162,7 +179,11 @@ export default async function RootLayout({
             <ConfigProvider configs={configs}>
               <NotificationProvider ablyEnabled={isAblyEnabled}>
                 <MenuProvider menus={menus}>
-                  <ResponsiveFontScale scaleFactor={0.017} baseSize={0}>
+                  <ResponsiveFontScale
+                    scaleFactor={0.017}
+                    baseSize={0}
+                    fontScalePercent={fontScalePercent}
+                  >
                     <LoadingAnimation mainColor={mainColor} />
                     <LayoutContainer>
                       <Suspense>

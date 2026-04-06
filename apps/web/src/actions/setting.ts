@@ -97,9 +97,10 @@ export async function getSettings(
 }
 
 import {
-  defaultConfigs,
   extractDefaultValue,
   extractOptions,
+  extractValidationRules,
+  getConfigDefinition,
 } from "@/data/default-configs";
 
 /*
@@ -148,7 +149,7 @@ export async function updateSettings(
   // 校验配置值，并过滤出允许写入的配置项
   const sanitizedSettings: typeof settings = [];
   for (const setting of settings) {
-    const configDef = defaultConfigs.find((c) => c.key === setting.key);
+    const configDef = getConfigDefinition(setting.key);
     if (!configDef) {
       return response.badRequest({
         message: `未知的配置项: ${setting.key}`,
@@ -159,9 +160,10 @@ export async function updateSettings(
       });
     }
 
-    const options = extractOptions(configDef.value);
+    const options = extractOptions(configDef);
+    const validationRules = extractValidationRules(configDef);
     const newValue = extractDefaultValue(setting.value);
-    const defaultValue = extractDefaultValue(configDef.value);
+    const defaultValue = extractDefaultValue(configDef);
 
     // 1. Options 校验
     if (options && options.length > 0) {
@@ -216,6 +218,37 @@ export async function updateSettings(
             message: `配置项 ${setting.key} 类型错误。应为 ${defaultType}，实际为 ${typeof newValue}。`,
           });
         }
+      }
+    }
+
+    if (
+      validationRules &&
+      (validationRules.integer ||
+        validationRules.min !== undefined ||
+        validationRules.max !== undefined)
+    ) {
+      if (typeof newValue !== "number" || !Number.isFinite(newValue)) {
+        return response.badRequest({
+          message: `配置项 ${setting.key} 必须是有效数字。`,
+        });
+      }
+
+      if (validationRules.integer && !Number.isInteger(newValue)) {
+        return response.badRequest({
+          message: `配置项 ${setting.key} 必须是整数。`,
+        });
+      }
+
+      if (validationRules.min !== undefined && newValue < validationRules.min) {
+        return response.badRequest({
+          message: `配置项 ${setting.key} 不能小于 ${validationRules.min}。`,
+        });
+      }
+
+      if (validationRules.max !== undefined && newValue > validationRules.max) {
+        return response.badRequest({
+          message: `配置项 ${setting.key} 不能大于 ${validationRules.max}。`,
+        });
       }
     }
 

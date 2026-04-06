@@ -14,7 +14,11 @@ import { useFooterStore } from "@/store/footer-store";
 
 interface LightboxImage {
   src: string;
+  previewSrc: string;
   alt: string;
+  objectFit: string;
+  objectPosition: string;
+  borderRadius: string;
 }
 
 /**
@@ -38,9 +42,13 @@ export default function ImageLightbox({
   const [isClosing, setIsClosing] = useState(false); // New state for manual close control
   const [openedIndex, setOpenedIndex] = useState<number | null>(null); // Track which image opened the lightbox
   const [scale, setScale] = useState(1); // Zoom level
+  const [loadedSources, setLoadedSources] = useState<Record<string, true>>({});
 
   // Store references to the actual DOM elements to calculate positions
   const imageElementsRef = useRef<(HTMLImageElement | null)[]>([]);
+  const visibilityResetTimeoutsRef = useRef(
+    new Map<HTMLImageElement, number>(),
+  );
 
   // Footer control
   const setFooterVisible = useFooterStore((state) => state.setFooterVisible);
@@ -67,13 +75,53 @@ export default function ImageLightbox({
     }
   }, [currentIndex, isOpen, images.length]);
 
+  const markImageLoaded = useCallback((src: string) => {
+    setLoadedSources((prev) => {
+      if (prev[src]) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [src]: true,
+      };
+    });
+  }, []);
+
   // Helper to toggle original image visibility
   const setOriginalImageVisible = useCallback(
     (index: number, visible: boolean) => {
       const img = imageElementsRef.current[index];
       // Verify if the element is still in the document to prevent errors during navigation
       if (img && document.body.contains(img)) {
-        img.style.opacity = visible ? "1" : "0";
+        const existingTimeout = visibilityResetTimeoutsRef.current.get(img);
+        if (existingTimeout !== undefined) {
+          window.clearTimeout(existingTimeout);
+          visibilityResetTimeoutsRef.current.delete(img);
+        }
+
+        img.style.setProperty("transition", "none", "important");
+        img.dataset.lightboxVisibility = visible ? "restoring" : "hidden";
+
+        requestAnimationFrame(() => {
+          if (document.body.contains(img)) {
+            img.style.removeProperty("transition");
+
+            if (visible) {
+              const timeoutId = window.setTimeout(() => {
+                if (
+                  document.body.contains(img) &&
+                  img.dataset.lightboxVisibility === "restoring"
+                ) {
+                  delete img.dataset.lightboxVisibility;
+                }
+                visibilityResetTimeoutsRef.current.delete(img);
+              }, 160);
+
+              visibilityResetTimeoutsRef.current.set(img, timeoutId);
+            }
+          }
+        });
       }
     },
     [],
@@ -121,10 +169,18 @@ export default function ImageLightbox({
       document.querySelectorAll<HTMLImageElement>("img[data-lightbox]"),
     ).filter((img) => img.offsetParent !== null); // Filter out hidden/deleted images
 
-    const newImages = imgElements.map((img) => ({
-      src: img.src,
-      alt: img.alt || "",
-    }));
+    const newImages = imgElements.map((img) => {
+      const computedStyle = window.getComputedStyle(img);
+
+      return {
+        src: img.dataset.lightboxSrc || img.src,
+        previewSrc: img.currentSrc || img.src,
+        alt: img.alt || "",
+        objectFit: computedStyle.objectFit || "fill",
+        objectPosition: computedStyle.objectPosition || "50% 50%",
+        borderRadius: computedStyle.borderRadius || "0px",
+      };
+    });
 
     return { elements: imgElements, data: newImages };
   }, []);
@@ -210,11 +266,21 @@ export default function ImageLightbox({
 
   // Restore all images on unmount or forced cleanup
   useEffect(() => {
+    const visibilityResetTimeouts = visibilityResetTimeoutsRef.current;
+
     return () => {
       // Restore opacity of all images
       imageElementsRef.current.forEach((img) => {
-        if (img) img.style.opacity = "";
+        if (img) {
+          delete img.dataset.lightboxVisibility;
+          img.style.removeProperty("transition");
+          img.style.removeProperty("opacity");
+        }
       });
+      visibilityResetTimeouts.forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+      visibilityResetTimeouts.clear();
       // Clear all references
       imageElementsRef.current = [];
       thumbnailRefs.current = [];
@@ -255,6 +321,14 @@ export default function ImageLightbox({
       }
       img[data-lightbox]:hover {
         opacity: 0.8 !important;
+      }
+      img[data-lightbox][data-lightbox-visibility="hidden"],
+      img[data-lightbox][data-lightbox-visibility="hidden"]:hover {
+        opacity: 0 !important;
+      }
+      img[data-lightbox][data-lightbox-visibility="restoring"],
+      img[data-lightbox][data-lightbox-visibility="restoring"]:hover {
+        opacity: 1 !important;
       }
     `;
     document.head.appendChild(style);
@@ -391,6 +465,9 @@ export default function ImageLightbox({
   if (!mounted) return null;
 
   const currentImage = images[currentIndex];
+  const isCurrentImageLoaded = currentImage
+    ? Boolean(loadedSources[currentImage.src])
+    : false;
 
   return createPortal(
     <div className="lightbox-portal" onWheel={handleWheel}>
@@ -496,7 +573,7 @@ export default function ImageLightbox({
                         }`}
                       >
                         <img
-                          src={img.src}
+                          src={img.previewSrc}
                           alt={img.alt}
                           className="h-full w-auto object-cover"
                           loading="lazy"
@@ -514,10 +591,8 @@ export default function ImageLightbox({
       {/* Group 2: Image Layer - Dynamic keys for sliding */}
       <AnimatePresence mode="popLayout" custom={{ direction, isSliding }}>
         {isOpen && geometry && currentImage && (
-          <motion.img
+          <motion.div
             key={currentIndex}
-            src={currentImage.src}
-            alt={currentImage.alt}
             // Enable drag only when zoomed in
             drag={scale > 1}
             dragConstraints={{
@@ -554,7 +629,7 @@ export default function ImageLightbox({
                   width: geometry.initialRect.width,
                   height: geometry.initialRect.height,
                   opacity: 1,
-                  borderRadius: "4px",
+                  borderRadius: currentImage.borderRadius,
                 };
               },
               // Case 2: Center (Target state for both)
@@ -582,6 +657,7 @@ export default function ImageLightbox({
                     height: geometry.initialRect.height,
                     opacity: 1,
                     scale: 1, // Reset scale on close
+                    borderRadius: currentImage.borderRadius,
                     transition: { duration: 0.25, ease: "easeInOut" },
                   };
                 }
@@ -623,6 +699,7 @@ export default function ImageLightbox({
                     width: geometry.initialRect.width,
                     height: geometry.initialRect.height,
                     opacity: 1,
+                    borderRadius: currentImage.borderRadius,
                     boxShadow: "none", // Remove shadow so it merges with original
                     transition: { duration: 0.25, ease: "easeInOut" },
                   };
@@ -661,7 +738,7 @@ export default function ImageLightbox({
                 }, 200);
               }
             }}
-            className="fixed top-0 left-0 z-[1000] object-contain shadow-2xl origin-center select-none"
+            className="fixed top-0 left-0 z-[1000] origin-center select-none"
             style={{
               maxWidth: "none",
               maxHeight: "none",
@@ -669,7 +746,49 @@ export default function ImageLightbox({
             }}
             draggable={false}
             onClick={(e) => e.stopPropagation()}
-          />
+          >
+            <div className="relative h-full w-full overflow-hidden shadow-2xl">
+              <img
+                src={currentImage.previewSrc}
+                alt={currentImage.alt}
+                className={`absolute inset-0 h-full w-full transition-opacity duration-200 ${
+                  isCurrentImageLoaded ? "opacity-0" : "opacity-100"
+                }`}
+                style={{
+                  objectFit: currentImage.objectFit as
+                    | "contain"
+                    | "cover"
+                    | "fill"
+                    | "none"
+                    | "scale-down",
+                  objectPosition: currentImage.objectPosition,
+                }}
+                loading="eager"
+                decoding="async"
+                draggable={false}
+              />
+              <img
+                src={currentImage.src}
+                alt={currentImage.alt}
+                className={`absolute inset-0 h-full w-full transition-opacity duration-200 ${
+                  isCurrentImageLoaded ? "opacity-100" : "opacity-0"
+                }`}
+                style={{
+                  objectFit: currentImage.objectFit as
+                    | "contain"
+                    | "cover"
+                    | "fill"
+                    | "none"
+                    | "scale-down",
+                  objectPosition: currentImage.objectPosition,
+                }}
+                loading="eager"
+                decoding="async"
+                draggable={false}
+                onLoad={() => markImageLoaded(currentImage.src)}
+              />
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>,

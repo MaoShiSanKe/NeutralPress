@@ -1,19 +1,20 @@
 import {
   RiEye2Line,
   RiFolder2Line,
+  RiLock2Line,
   RiPriceTagLine,
   RiPushpin2Fill,
   RiTimeLine,
 } from "@remixicon/react";
 
+import BrowserDateTime from "@/components/client/BrowserDateTime";
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
-import { formatDate } from "@/lib/shared/date-format";
 
 interface PostCardProps {
   title: string | React.ReactNode;
   slug?: string;
-  date?: string;
+  date?: Date | string | null;
   category?: { name: string; slug: string }[];
   tags?: { name: string; slug: string }[];
   cover?:
@@ -26,6 +27,7 @@ interface PostCardProps {
     | string;
   summary?: string | React.ReactNode;
   isPinned?: boolean;
+  accessMode?: "PUBLIC" | "ROLE" | "PASSWORD";
   className?: string;
   showAll?: boolean; // 新增：是否显示所有信息（浏览量+标签并排，摘要始终显示）
 }
@@ -39,6 +41,7 @@ export default function PostCard({
   cover,
   summary,
   isPinned = false,
+  accessMode = "PUBLIC",
   className = "",
   showAll = false,
 }: PostCardProps) {
@@ -48,6 +51,7 @@ export default function PostCard({
     : cover
       ? { url: cover }
       : null;
+  const isProtectedPost = accessMode !== "PUBLIC";
 
   return (
     <div className={`h-full w-full relative group ${className}`}>
@@ -98,11 +102,16 @@ export default function PostCard({
       {/* 内容区域 */}
       <div className="relative z-20 pl-10 pr-12 h-full flex flex-col justify-center pointer-events-none">
         <div className="text-3xl text-foreground group-hover:text-foreground transition-colors duration-300 relative">
-          <h2
-            className="relative inline box-decoration-clone bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
-            data-fade-char
-          >
-            {title}
+          <h2 className="relative inline box-decoration-clone bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
+            {isProtectedPost && (
+              <RiLock2Line
+                size={"0.9em"}
+                className="inline-block align-[-0.08em] mr-2 text-foreground"
+              />
+            )}
+            <span className="inline" data-fade-char>
+              {title}
+            </span>
           </h2>
         </div>
         <div className="text-xl py-2 flex items-center flex-nowrap min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-foreground/90">
@@ -112,7 +121,7 @@ export default function PostCard({
               data-fade
             >
               <RiTimeLine size={"1em"} />
-              <span>{formatDate(date)}</span>
+              <BrowserDateTime value={date} precision="date" />
             </span>
           )}
           {category?.length !== 0 && (

@@ -8,25 +8,17 @@ import {
   RiListCheck,
   RiSuperscript2,
 } from "@remixicon/react";
+import type { PostTocItem } from "@repo/shared-types/api/post";
 import { AnimatePresence, motion } from "framer-motion";
 
 import Link from "@/components/ui/Link";
-import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
-import type {
-  MDXContentMessage,
-  ScrollProgressMessage,
-} from "@/types/broadcast-messages";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
+import type { ScrollProgressMessage } from "@/types/broadcast-messages";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { Drawer } from "@/ui/Drawer";
 import { Tooltip } from "@/ui/Tooltip";
-
-interface TocItem {
-  id: string;
-  text: string;
-  level: number;
-}
 
 /**
  * 视口内的动态内容项类型
@@ -44,57 +36,18 @@ interface ViewportContentItem {
 }
 
 interface PostTocProps {
-  /**
-   * 内容容器的选择器，默认为 '.md-content' 或 '.max-w-4xl'
-   * PostToc 会从这个容器中自动提取标题
-   */
+  tocItems: PostTocItem[];
   contentSelector?: string;
   isMobile?: boolean;
   transparent?: boolean;
 }
 
-function createHeadingSlug(text: string): string {
-  const trimmed = text.trim().toLowerCase();
-  const normalized = trimmed
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-
-  return normalized || "section";
-}
-
-function ensureHeadingId(
-  heading: HTMLElement,
-  usedIds: Set<string>,
-): string | null {
-  const text = heading.textContent?.trim() || "";
-  if (!text) return null;
-
-  const initialId = heading.id?.trim();
-  const baseId = initialId || createHeadingSlug(text);
-
-  let id = baseId;
-  let index = 2;
-  while (usedIds.has(id)) {
-    id = `${baseId}-${index}`;
-    index += 1;
-  }
-
-  if (heading.id !== id) {
-    heading.id = id;
-  }
-
-  usedIds.add(id);
-  return id;
-}
-
 export default function PostToc({
+  tocItems,
   contentSelector = ".md-content, .max-w-4xl",
   isMobile = false,
   transparent = false,
 }: PostTocProps) {
-  const [tocItems, setTocItems] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>("");
   const isCollapsed = false;
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -139,6 +92,32 @@ export default function PostToc({
 
   // 广播滚动进度
   const { broadcast } = useBroadcastSender<ScrollProgressMessage>();
+
+  const resolveCurrentActiveHeadingId = useCallback(
+    (headingRoot: ParentNode, activeThreshold: number) => {
+      const headings = Array.from(
+        headingRoot.querySelectorAll<HTMLElement>(
+          "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]",
+        ),
+      );
+
+      if (headings.length === 0) {
+        return "";
+      }
+
+      let currentActiveId = headings[0]?.id || "";
+
+      headings.forEach((heading) => {
+        const rect = heading.getBoundingClientRect();
+        if (rect.top <= activeThreshold) {
+          currentActiveId = heading.id;
+        }
+      });
+
+      return currentActiveId;
+    },
+    [],
+  );
 
   // 将 em 单位转换为像素值
   const emToPx = (em: number): number => {
@@ -281,61 +260,6 @@ export default function PostToc({
     setViewportItems(items);
   }, [findContentContainer, isElementInViewport]);
 
-  // 从 DOM 中提取目录
-  const extractTocItems = useCallback(() => {
-    const items: TocItem[] = [];
-
-    // 查找内容容器
-    const contentContainer = findContentContainer();
-    if (!contentContainer) {
-      console.warn(`PostToc: 未找到内容容器 "${contentSelector}"`);
-      return;
-    }
-
-    // 查找所有已渲染的标题元素，并为缺失 id 的标题自动补全 id
-    const headings = contentContainer.querySelectorAll(
-      "h1, h2, h3, h4, h5, h6",
-    );
-    const usedIds = new Set<string>();
-
-    headings.forEach((heading) => {
-      const text = heading.textContent || "";
-      const id = ensureHeadingId(heading as HTMLElement, usedIds);
-      if (!id) return;
-
-      // 获取原始标题级别
-      const originalLevel = parseInt(heading.tagName.substring(1)); // h1 -> 1, h2 -> 2, etc.
-
-      // 将 h1 当作 h2 处理，其他级别保持不变
-      const adjustedLevel = originalLevel === 1 ? 2 : originalLevel;
-
-      // 将所有目录层级减 1，使层级从 1 开始
-      const level = Math.max(1, adjustedLevel - 1);
-
-      items.push({ id, text, level });
-    });
-
-    setTocItems(items);
-  }, [findContentContainer, contentSelector]);
-
-  // 初始提取目录
-  useEffect(() => {
-    extractTocItems();
-  }, [extractTocItems]);
-
-  // 监听 MDX 渲染完成广播，重新提取目录
-  useBroadcast<MDXContentMessage>((message) => {
-    if (
-      message.type === "mdx-content-rendered" ||
-      message.type === "mdx-content-recheck"
-    ) {
-      // 稍微延迟一下确保 DOM 完全更新
-      setTimeout(() => {
-        extractTocItems();
-      }, 150);
-    }
-  });
-
   // 处理页面加载时的hash
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash) {
@@ -443,22 +367,14 @@ export default function PostToc({
       });
 
       // 更新活动标题 - 只在当前内容容器内查找，避免背景页面/其他区域标题干扰
-      const headingRoot = contentContainer || document;
-      const headings = headingRoot.querySelectorAll(
-        "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]",
-      );
       const activeThreshold = scrollContainer
         ? scrollContainer.getBoundingClientRect().top + emToPx(16)
         : emToPx(16);
-
-      let currentActiveId = "";
-
-      headings.forEach((heading) => {
-        const rect = heading.getBoundingClientRect();
-        if (rect.top <= activeThreshold) {
-          currentActiveId = heading.id;
-        }
-      });
+      const headingRoot = contentContainer || document;
+      const currentActiveId = resolveCurrentActiveHeadingId(
+        headingRoot,
+        activeThreshold,
+      );
 
       setActiveId(currentActiveId);
 
@@ -486,6 +402,7 @@ export default function PostToc({
     scanViewportContent,
     broadcast,
     findContentContainer,
+    resolveCurrentActiveHeadingId,
   ]);
 
   // 更新高亮指示器位置
@@ -716,19 +633,12 @@ export default function PostToc({
       });
 
       // 更新活动标题（仅在当前内容容器中查找）
-      const headingRoot = contentContainer || document;
-      const headings = headingRoot.querySelectorAll(
-        "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]",
-      );
       const activeThreshold = emToPx(16);
-      let currentActiveId = "";
-
-      headings.forEach((heading) => {
-        const rect = heading.getBoundingClientRect();
-        if (rect.top <= activeThreshold) {
-          currentActiveId = heading.id;
-        }
-      });
+      const headingRoot = contentContainer || document;
+      const currentActiveId = resolveCurrentActiveHeadingId(
+        headingRoot,
+        activeThreshold,
+      );
 
       setActiveId(currentActiveId);
       scanViewportContent();
@@ -773,7 +683,13 @@ export default function PostToc({
         clearTimeout(mobileScrollTimeoutRef.current);
       }
     };
-  }, [isMobile, findContentContainer, scanViewportContent, broadcast]);
+  }, [
+    isMobile,
+    findContentContainer,
+    scanViewportContent,
+    broadcast,
+    resolveCurrentActiveHeadingId,
+  ]);
 
   // 回到顶部
   const scrollToTop = () => {

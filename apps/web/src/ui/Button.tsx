@@ -31,6 +31,7 @@ export interface ButtonProps
   loading?: boolean | number;
   loadingText?: string;
   fullWidth?: boolean;
+  iconTransitionKey?: string | number;
 }
 
 export function Button({
@@ -43,6 +44,7 @@ export function Button({
   loading = false,
   loadingText,
   fullWidth = false,
+  iconTransitionKey,
   className = "",
   disabled = false,
   onClick,
@@ -103,6 +105,35 @@ export function Button({
   const displayText = isLoading && loadingText ? loadingText : label;
   const shouldShowSpinner = isLoading && !loadingText;
   const isDisabled = disabled || isLoading;
+  const renderIcon = (position: "left" | "right") => {
+    if (!icon || iconPosition !== position) return null;
+
+    if (iconTransitionKey !== undefined) {
+      return (
+        <AutoTransition
+          className="inline-flex"
+          duration={0.25}
+          type="scale"
+          initial={false}
+        >
+          <span key={iconTransitionKey} className="inline-flex">
+            {icon}
+          </span>
+        </AutoTransition>
+      );
+    }
+
+    return (
+      <motion.span
+        className="inline-flex"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
+        {icon}
+      </motion.span>
+    );
+  };
 
   // CSS 自定义属性用于加载进度
   const loadingStyles: MotionStyle | undefined = isNumericLoading
@@ -207,29 +238,11 @@ export function Button({
             className="flex items-center gap-2"
             key={displayText || "display-content"}
           >
-            {icon && iconPosition === "left" && (
-              <motion.span
-                className="inline-flex"
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.1 }}
-              >
-                {icon}
-              </motion.span>
-            )}
+            {renderIcon("left")}
 
             {displayText && <span>{displayText}</span>}
 
-            {icon && iconPosition === "right" && (
-              <motion.span
-                className="inline-flex"
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.1 }}
-              >
-                {icon}
-              </motion.span>
-            )}
+            {renderIcon("right")}
           </div>
         </AutoTransition>
       </div>

@@ -9,12 +9,14 @@ interface CaptchaButtonProps extends React.ComponentProps<typeof Button> {
    * 自定义验证过程中的文本，如果未提供则使用默认文本 "正在执行安全验证"
    */
   verificationText?: string;
+  broadcastKey?: string;
 }
 
 export function CaptchaButton({
   loading: externalLoading,
   loadingText: externalLoadingText,
   verificationText,
+  broadcastKey,
   ...props
 }: CaptchaButtonProps) {
   const [internalLoading, setInternalLoading] = useState<number | boolean>(0);
@@ -41,12 +43,12 @@ export function CaptchaButton({
     onSolve: (token) => {
       setInternalLoading(false);
       setInternalLoadingText("环境安全成功");
-      broadcast({ type: "captcha-solved", token });
+      broadcast({ type: "captcha-solved", token, captchaKey: broadcastKey });
     },
     onError: (error) => {
       setInternalLoading(true);
       setInternalLoadingText("环境安全确认失败，请刷新重试");
-      broadcast({ type: "captcha-error", error });
+      broadcast({ type: "captcha-error", error, captchaKey: broadcastKey });
       console.error("Captcha error:", error);
     },
     onProgress: (progress) => {
@@ -63,8 +65,15 @@ export function CaptchaButton({
   }, [solve]);
 
   // 监听重置验证码的广播消息
-  useBroadcast((message: { type: string }) => {
+  useBroadcast((message: { type: string; captchaKey?: string }) => {
     if (message?.type === "captcha-reset") {
+      if (
+        message.captchaKey !== undefined &&
+        message.captchaKey !== broadcastKey
+      ) {
+        return;
+      }
+
       setInternalLoading(0);
       setInternalLoadingText(verificationText || "正在执行安全验证");
       reset();

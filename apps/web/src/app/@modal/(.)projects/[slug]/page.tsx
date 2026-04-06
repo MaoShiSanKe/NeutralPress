@@ -39,15 +39,21 @@ async function renderProjectDetailModalPage(slug: string) {
   cacheTag(...Array.from(pageCacheTags));
   cacheLife("max");
 
-  const contentRootId = `project-modal-content-${project.id}`;
-  const contentSelector = `#${contentRootId} .md-content`;
+  const contentRootId = `project-modal-article-content-${project.id}`;
+  const contentSelector = `#${contentRootId}`;
 
   return (
     <ProjectPaperModal
       title={project.title}
-      toc={<PostToc contentSelector={contentSelector} transparent={true} />}
+      toc={
+        <PostToc
+          tocItems={project.tocItems}
+          contentSelector={contentSelector}
+          transparent={true}
+        />
+      }
     >
-      <div id={contentRootId}>
+      <div>
         <ProjectDetailHeader project={project} variant="modal" />
         <div className="mx-auto max-w-6xl px-6 pb-6 pt-10 md:px-12">
           <ProjectDetailBody
@@ -56,6 +62,7 @@ async function renderProjectDetailModalPage(slug: string) {
             shikiTheme={shikiTheme}
             siteURL={siteURL}
             variant="modal"
+            contentRootId={contentRootId}
           />
         </div>
       </div>

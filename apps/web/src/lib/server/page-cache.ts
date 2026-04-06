@@ -5,6 +5,7 @@ import { unstable_cache } from "next/cache";
 import path from "path";
 
 import type { AllBlockConfigs } from "@/blocks/core/types/base";
+import { LISTABLE_POST_PUBLISHED_WHERE } from "@/lib/server/post-access";
 import prisma from "@/lib/server/prisma";
 
 // 自定义 JSON 类型定义（避免与 Prisma 的 JsonValue 冲突）
@@ -279,8 +280,7 @@ export async function getMainRouteStaticParams(): Promise<
     needPostStats
       ? prisma.post.findMany({
           where: {
-            status: "PUBLISHED",
-            deletedAt: null,
+            ...LISTABLE_POST_PUBLISHED_WHERE,
           },
           select: {
             tags: { select: { slug: true } },
