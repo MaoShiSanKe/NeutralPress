@@ -1,7 +1,6 @@
 // script/update-db.ts
 // 数据库更新和迁移脚本
 
-import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import Rlog from "rlog-js";
@@ -9,6 +8,7 @@ import { pathToFileURL } from "url";
 
 import { getPrismaDatabaseUrl, loadWebEnv } from "@/../scripts/load-env";
 import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
+import { runPrismaMigrateDeploy } from "@/../scripts/prisma-cli";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let prisma: any;
@@ -214,25 +214,13 @@ async function runMigrateDeploy(): Promise<void> {
   try {
     rlog.info("> Running prisma migrate deploy...");
 
-    // 确保 .prisma/client 存在
-    const clientPath = path.join(
-      process.cwd(),
-      "node_modules",
-      ".prisma",
-      "client",
-    );
-    if (!fs.existsSync(clientPath)) {
-      rlog.info("  Generating Prisma client first...");
-      execSync("npx prisma generate", {
-        stdio: "pipe",
-        cwd: process.cwd(),
-      });
-    }
-
-    const output = execSync("npx prisma migrate deploy", {
-      stdio: "pipe",
+    let output = "";
+    await runPrismaMigrateDeploy({
       cwd: process.cwd(),
-      encoding: "utf-8",
+      logger: (line: string) => {
+        output += line + "\n";
+        rlog.info(line);
+      },
     });
 
     // 如果输出包含有用信息，显示它
