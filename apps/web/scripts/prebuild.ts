@@ -6,6 +6,7 @@ import path from "path";
 import Rlog from "rlog-js";
 
 import { loadWebEnv } from "@/../scripts/load-env";
+import { runTaskWithRetry } from "@/../scripts/retry-task";
 
 // 加载 apps/web 与仓库根目录下的 .env* 文件
 loadWebEnv();
@@ -25,6 +26,15 @@ rlog.file.init();
 
 const startTime = Date.now();
 const isPortableBuild = process.env.BUILD_PROFILE === "portable";
+
+function runPrebuildTask<T>(
+  taskName: string,
+  task: () => Promise<T> | T,
+): Promise<T> {
+  return runTaskWithRetry(taskName, task, {
+    logger: rlog,
+  });
+}
 
 rlog.log();
 rlog.log("NeutralPress Initializing...");
@@ -53,7 +63,10 @@ try {
   } else {
     rlog.log("Starting environment variables check...");
     const { checkEnvironmentVariables } = await import("./check-env.js");
-    await checkEnvironmentVariables();
+    await runPrebuildTask(
+      "environment variables check",
+      checkEnvironmentVariables,
+    );
     rlog.log();
 
     rlog.log("Starting JWT key pair validation and Redis connection check...");
@@ -61,71 +74,114 @@ try {
       import("./check-jwt-token.js"),
       import("./check-redis.js"),
     ]);
-    await Promise.all([checkJWTKeyPair(), checkRedisConnection()]);
+    await Promise.all([
+      runPrebuildTask("JWT key pair validation", checkJWTKeyPair),
+      runPrebuildTask("Redis connection check", checkRedisConnection),
+    ]);
     rlog.log();
 
-    rlog.log("Starting database check...");
-    const { checkDatabaseHealth } = await import("./check-db.js");
-    await checkDatabaseHealth();
-    rlog.log();
-
-    rlog.log("Starting database update...");
-    const { updateDatabase } = await import("./update-db.js");
-    await updateDatabase();
-    rlog.log();
-
-    rlog.info("Starting database seeding with default values...");
-    const { seedDefaults } = await import("./seed-defaults.js");
-    await seedDefaults();
-    rlog.log();
-
-    rlog.log("Starting persistent media synchronization...");
-    const { syncPersistentMedia } = await import("./sync-persistent-media.js");
-    await syncPersistentMedia();
-    rlog.log();
-
-    rlog.log("Starting cloud instance synchronization...");
-    const { syncCloudInstance } = await import("./sync-cloud-instance.js");
-    await syncCloudInstance();
-    rlog.log();
-
-    rlog.log("Starting configuration, menu, and page cache generation...");
     const [
+      { closePrismaScriptRuntime, createPrismaScriptRuntime },
+      { checkDatabaseHealth },
+      { updateDatabase },
+      { seedDefaults },
+      { syncPersistentMedia },
+      { syncCloudInstance },
       { generateConfigCache },
       { generateMenuCache },
       { generatePageCache },
+      { default: generateViewCountCache },
     ] = await Promise.all([
+      import("./load-prisma-client.js"),
+      import("./check-db.js"),
+      import("./update-db.js"),
+      import("./seed-defaults.js"),
+      import("./sync-persistent-media.js"),
+      import("./sync-cloud-instance.js"),
       import("./generate-config-cache.js"),
       import("./generate-menu-cache.js"),
       import("./generate-page-cache.js"),
+      import("./generate-view-count-cache.js"),
     ]);
-    await Promise.all([
-      generateConfigCache(),
-      generateMenuCache(),
-      generatePageCache(),
-    ]);
-    rlog.log();
 
-    rlog.log("Starting view count cache generation...");
-    const { default: generateViewCountCache } = await import(
-      "./generate-view-count-cache.js"
+    rlog.log("Starting Prisma runtime initialization...");
+    const prismaRuntime = await runPrebuildTask(
+      "Prisma runtime initialization",
+      createPrismaScriptRuntime,
     );
-    await generateViewCountCache();
     rlog.log();
+    const sharedPrisma = prismaRuntime.prisma;
+    try {
+      rlog.log("Starting database check...");
+      await runPrebuildTask("database check", () =>
+        checkDatabaseHealth({ prisma: sharedPrisma }),
+      );
+      rlog.log();
+
+      rlog.log("Starting database update...");
+      await runPrebuildTask("database update", () =>
+        updateDatabase({ prisma: sharedPrisma }),
+      );
+      rlog.log();
+
+      rlog.info("Starting database seeding with default values...");
+      await runPrebuildTask("database seeding", () =>
+        seedDefaults({ prisma: sharedPrisma }),
+      );
+      rlog.log();
+
+      rlog.log("Starting persistent media synchronization...");
+      await runPrebuildTask("persistent media synchronization", () =>
+        syncPersistentMedia({ prisma: sharedPrisma }),
+      );
+      rlog.log();
+
+      rlog.log("Starting cloud instance synchronization...");
+      await runPrebuildTask("cloud instance synchronization", () =>
+        syncCloudInstance({ prisma: sharedPrisma }),
+      );
+      rlog.log();
+
+      rlog.log("Starting configuration, menu, and page cache generation...");
+      await Promise.all([
+        runPrebuildTask("configuration cache generation", () =>
+          generateConfigCache({ prisma: sharedPrisma }),
+        ),
+        runPrebuildTask("menu cache generation", () =>
+          generateMenuCache({ prisma: sharedPrisma }),
+        ),
+        runPrebuildTask("page cache generation", () =>
+          generatePageCache({ prisma: sharedPrisma }),
+        ),
+      ]);
+      rlog.log();
+
+      rlog.log("Starting view count cache generation...");
+      await runPrebuildTask("view count cache generation", () =>
+        generateViewCountCache({ prisma: sharedPrisma }),
+      );
+      rlog.log();
+    } finally {
+      await closePrismaScriptRuntime(prismaRuntime);
+    }
   }
 
   rlog.log("Starting block business catalog generation...");
   const { generateBlockBusinessCatalog } = await import(
     "./generate-block-business-catalog.js"
   );
-  generateBlockBusinessCatalog();
+  await runPrebuildTask("block business catalog generation", () => {
+    generateBlockBusinessCatalog();
+  });
   rlog.log();
 
   rlog.log("Starting block definition catalog generation...");
   const { generateBlockDefinitionCatalog } = await import(
     "./generate-block-definition-catalog.js"
   );
-  generateBlockDefinitionCatalog();
+  await runPrebuildTask("block definition catalog generation", () => {
+    generateBlockDefinitionCatalog();
+  });
 
   // 完成 PreBuild
   const endTime = Date.now();
@@ -155,7 +211,9 @@ try {
       "Please check your build configuration and generated code artifacts.",
     );
   } else {
-    rlog.error("Please check your database configuration and try again.");
+    rlog.error(
+      "Please check your database, Redis, or external service configuration and try again.",
+    );
   }
   process.exit(1);
 }

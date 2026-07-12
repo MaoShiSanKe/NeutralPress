@@ -69,7 +69,7 @@ export interface FeedData {
   };
 }
 
-function normalizeFeedText(value: string): string {
+export function normalizeFeedText(value: string): string {
   return value
     .replace(/<[^>]*>/g, " ")
     .replace(/&nbsp;/gi, " ")
@@ -83,7 +83,10 @@ function normalizeFeedText(value: string): string {
     .trim();
 }
 
-function stripLeadingMarkdownTitle(markdown: string, title: string): string {
+export function stripLeadingMarkdownTitle(
+  markdown: string,
+  title: string,
+): string {
   const normalizedTitle = normalizeFeedText(title);
   if (!normalizedTitle) {
     return markdown;
@@ -112,7 +115,7 @@ function stripLeadingMarkdownTitle(markdown: string, title: string): string {
   return markdown;
 }
 
-function stripLeadingHtmlTitle(html: string, title: string): string {
+export function stripLeadingHtmlTitle(html: string, title: string): string {
   const normalizedTitle = normalizeFeedText(title);
   if (!normalizedTitle) {
     return html;
@@ -129,11 +132,11 @@ function stripLeadingHtmlTitle(html: string, title: string): string {
   return html;
 }
 
-function buildFeedLeadHtml(postUrl: string): string {
+export function buildFeedLeadHtml(postUrl: string): string {
   return `<p class="feed-lead">前往 <a href="${postUrl}">${postUrl}</a> 查看以获得最佳体验。</p>`;
 }
 
-function prependFeedLead(content: string, postUrl: string): string {
+export function prependFeedLead(content: string, postUrl: string): string {
   const leadHtml = buildFeedLeadHtml(postUrl);
   return content ? `${leadHtml}\n${content}` : leadHtml;
 }

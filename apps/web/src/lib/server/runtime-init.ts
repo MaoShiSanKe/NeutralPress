@@ -7,6 +7,10 @@ import { checkEnvironmentVariables } from "@/../scripts/check-env";
 import { checkJWTKeyPair } from "@/../scripts/check-jwt-token";
 import { checkRedisConnection } from "@/../scripts/check-redis";
 import generateViewCountCache from "@/../scripts/generate-view-count-cache";
+import {
+  closePrismaScriptRuntime,
+  createPrismaScriptRuntime,
+} from "@/../scripts/load-prisma-client";
 import { seedDefaults } from "@/../scripts/seed-defaults";
 import { syncCloudInstance } from "@/../scripts/sync-cloud-instance";
 import { syncPersistentMedia } from "@/../scripts/sync-persistent-media";
@@ -37,14 +41,23 @@ async function runMigrateDeployForStandalone(): Promise<void> {
 async function runRuntimeInitializationWithInjectedPrisma(): Promise<void> {
   await checkEnvironmentVariables();
   await Promise.all([checkJWTKeyPair(), checkRedisConnection()]);
-  await checkDatabaseHealth();
-  await updateDatabase({
-    runMigrateDeploy: runMigrateDeployForStandalone,
-  });
-  await seedDefaults();
-  await syncPersistentMedia();
-  await syncCloudInstance();
-  await generateViewCountCache();
+
+  const prismaRuntime = await createPrismaScriptRuntime();
+  const sharedPrisma = prismaRuntime.prisma;
+
+  try {
+    await checkDatabaseHealth({ prisma: sharedPrisma });
+    await updateDatabase({
+      prisma: sharedPrisma,
+      runMigrateDeploy: runMigrateDeployForStandalone,
+    });
+    await seedDefaults({ prisma: sharedPrisma });
+    await syncPersistentMedia({ prisma: sharedPrisma });
+    await syncCloudInstance({ prisma: sharedPrisma });
+    await generateViewCountCache({ prisma: sharedPrisma });
+  } finally {
+    await closePrismaScriptRuntime(prismaRuntime);
+  }
 }
 
 export async function runInternalRuntimeInitialization(): Promise<{

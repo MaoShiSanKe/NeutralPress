@@ -206,12 +206,15 @@ function toPlainSerializable(value: unknown): unknown {
 }
 
 // 辅助函数：获取字符串配置值
-function getStringValue(configValue: unknown, fallback: string = ""): string {
+export function getStringValue(
+  configValue: unknown,
+  fallback: string = "",
+): string {
   return typeof configValue === "string" ? configValue : fallback;
 }
 
 // 辅助函数：获取字符串数组配置值
-function getStringArrayValue(
+export function getStringArrayValue(
   configValue: unknown,
   fallback: string[] = [],
 ): string[] {
@@ -223,14 +226,14 @@ function getStringArrayValue(
 }
 
 // 辅助函数：获取布尔配置值
-function getBooleanValue(
+export function getBooleanValue(
   configValue: unknown,
   fallback: boolean = false,
 ): boolean {
   return typeof configValue === "boolean" ? configValue : fallback;
 }
 
-function parseMetadataBase(url: string): URL | undefined {
+export function parseMetadataBase(url: string): URL | undefined {
   const normalized = url.trim();
   if (!normalized) return undefined;
 
@@ -242,7 +245,7 @@ function parseMetadataBase(url: string): URL | undefined {
   }
 }
 
-function normalizeCanonicalPath(pathname: string): string {
+export function normalizeCanonicalPath(pathname: string): string {
   let normalized = pathname.trim();
   if (!normalized) return "/";
 
@@ -254,7 +257,7 @@ function normalizeCanonicalPath(pathname: string): string {
   return normalized || "/";
 }
 
-function normalizePathname(pathname?: string): string | undefined {
+export function normalizePathname(pathname?: string): string | undefined {
   if (!pathname) return undefined;
 
   const normalized = pathname.trim();
@@ -348,7 +351,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   );
 }
 
-function deepMergeMetadataValue(base: unknown, override: unknown): unknown {
+export function deepMergeMetadataValue(
+  base: unknown,
+  override: unknown,
+): unknown {
   if (override === undefined) return base;
   if (!isPlainObject(base) || !isPlainObject(override)) return override;
 
@@ -370,7 +376,10 @@ const DEEP_MERGE_METADATA_KEYS = [
   "pagination",
 ] as const;
 
-function mergeMetadata(base: Metadata, overrides: Partial<Metadata>): Metadata {
+export function mergeMetadata(
+  base: Metadata,
+  overrides: Partial<Metadata>,
+): Metadata {
   const merged: Metadata = {
     ...base,
     ...overrides,
@@ -404,7 +413,7 @@ function mergeMetadata(base: Metadata, overrides: Partial<Metadata>): Metadata {
  * @param pageTitle 页面标题（可选）
  * @returns 解析后的标题字符串
  */
-function parseTitleTemplate(
+export function parseTitleTemplate(
   template: string,
   title: string,
   subtitle?: string,
@@ -607,7 +616,7 @@ function extractPathnameForRule(pathname: string): string {
   }
 }
 
-function shouldForceNoIndex(pathname?: string): boolean {
+export function shouldForceNoIndex(pathname?: string): boolean {
   if (!pathname) return false;
   const normalizedPath = extractPathnameForRule(pathname).toLowerCase();
 
@@ -715,7 +724,7 @@ const getJsonLdSiteContext = unstable_cache(
   },
 );
 
-function normalizeKeywordList(
+export function normalizeKeywordList(
   keywords: string[] | string | null | undefined,
 ): string[] {
   if (!keywords) return [];
@@ -729,7 +738,7 @@ function normalizeKeywordList(
     .filter(Boolean);
 }
 
-function normalizeDateValue(
+export function normalizeDateValue(
   date: Date | string | null | undefined,
 ): string | null {
   if (!date) return null;
@@ -787,7 +796,9 @@ function normalizeAuthorList(
   return [{ name: fallbackAuthorName.trim(), type: "Person" }];
 }
 
-function resolveRobotsNoIndex(robots: Metadata["robots"] | undefined): boolean {
+export function resolveRobotsNoIndex(
+  robots: Metadata["robots"] | undefined,
+): boolean {
   if (!robots) return false;
   if (typeof robots === "string") {
     return /noindex/i.test(robots);

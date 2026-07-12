@@ -7,13 +7,12 @@ import fs from "fs";
 import path from "path";
 import RLog from "rlog-js";
 
-import { getPrismaDatabaseUrl } from "@/../scripts/load-env";
-import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
+import {
+  closePrismaScriptRuntime,
+  createPrismaScriptRuntime,
+} from "@/../scripts/load-prisma-client";
 
 const rlog = new RLog();
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let pool: any;
 
 // 页面项类型定义
 interface PageItem {
@@ -34,7 +33,10 @@ interface PageItem {
   userUid: number | null;
 }
 
-async function generatePageCache() {
+async function generatePageCache(options?: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prisma?: any;
+}) {
   const CACHE_FILE_PATH = path.join(
     process.cwd(),
     ".cache",
@@ -50,107 +52,95 @@ async function generatePageCache() {
       fs.mkdirSync(cacheDir, { recursive: true });
     }
 
-    // 动态导入 Prisma 客户端以避免初始化问题
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let prisma: any;
+    let prisma: any = options?.prisma;
+    const shouldManagePrismaLifecycle = !prisma;
+    let runtime: Awaited<ReturnType<typeof createPrismaScriptRuntime>> | null =
+      null;
+
+    if (!prisma) {
+      try {
+        runtime = await createPrismaScriptRuntime();
+        prisma = runtime.prisma;
+      } catch (error) {
+        rlog.warning(
+          "Prisma client not initialized, creating empty cache file",
+        );
+        rlog.warning("Error details:", error);
+        const result: Record<string, PageItem> = {};
+        fs.writeFileSync(
+          CACHE_FILE_PATH,
+          JSON.stringify(result, null, 2),
+          "utf-8",
+        );
+        rlog.log(`  Page cache generated: ${CACHE_FILE_PATH}`);
+        rlog.success(`  Cached 0 pages (Prisma not ready)`);
+        return;
+      }
+    }
+
     try {
-      const PrismaClient = await loadPrismaClientConstructor();
-      const { Pool } = await import("pg");
-      const { PrismaPg } = await import("@prisma/adapter-pg");
-
-      // 使用与生产环境相同的 adapter 模式
-      pool = new Pool({
-        connectionString: getPrismaDatabaseUrl(),
-      });
-      const adapter = new PrismaPg(pool);
-
-      prisma = new PrismaClient({
-        adapter,
-        log: [],
+      // 从数据库获取所有未删除的页面
+      const pages = await prisma.page.findMany({
+        where: {
+          deletedAt: null,
+        },
+        orderBy: { title: "asc" },
       });
 
-      // 测试连接
-      await prisma.$connect();
-    } catch (error) {
-      rlog.warning("Prisma client not initialized, creating empty cache file");
-      rlog.warning("Error details:", error);
+      // 构建以 slug 为键的缓存对象
       const result: Record<string, PageItem> = {};
+
+      pages.forEach(
+        (page: {
+          id: string;
+          title: string;
+          slug: string;
+          content: string;
+          contentType: string;
+          config: unknown;
+          status: string;
+          deletedAt: Date | null;
+          createdAt: Date;
+          updatedAt: Date;
+          isSystemPage: boolean;
+          metaDescription: string | null;
+          metaKeywords: string | null;
+          robotsIndex: boolean;
+          userUid: number | null;
+        }) => {
+          result[page.slug] = {
+            id: page.id,
+            title: page.title,
+            slug: page.slug,
+            content: page.content,
+            contentType: page.contentType as "MARKDOWN" | "HTML" | "MDX",
+            config: page.config,
+            status: page.status as "ACTIVE" | "SUSPENDED",
+            deletedAt: page.deletedAt,
+            createdAt: page.createdAt,
+            updatedAt: page.updatedAt,
+            isSystemPage: page.isSystemPage,
+            metaDescription: page.metaDescription,
+            metaKeywords: page.metaKeywords,
+            robotsIndex: page.robotsIndex,
+            userUid: page.userUid,
+          };
+        },
+      );
+
+      // 写入缓存文件
       fs.writeFileSync(
         CACHE_FILE_PATH,
         JSON.stringify(result, null, 2),
         "utf-8",
       );
+
       rlog.log(`  Page cache generated: ${CACHE_FILE_PATH}`);
-      rlog.success(`  Cached 0 pages (Prisma not ready)`);
-      return;
-    }
-
-    // 从数据库获取所有未删除的页面
-    const pages = await prisma.page.findMany({
-      where: {
-        deletedAt: null,
-      },
-      orderBy: { title: "asc" },
-    });
-
-    // 构建以 slug 为键的缓存对象
-    const result: Record<string, PageItem> = {};
-
-    pages.forEach(
-      (page: {
-        id: string;
-        title: string;
-        slug: string;
-        content: string;
-        contentType: string;
-        config: unknown;
-        status: string;
-        deletedAt: Date | null;
-        createdAt: Date;
-        updatedAt: Date;
-        isSystemPage: boolean;
-        metaDescription: string | null;
-        metaKeywords: string | null;
-        robotsIndex: boolean;
-        userUid: number | null;
-      }) => {
-        result[page.slug] = {
-          id: page.id,
-          title: page.title,
-          slug: page.slug,
-          content: page.content,
-          contentType: page.contentType as "MARKDOWN" | "HTML" | "MDX",
-          config: page.config,
-          status: page.status as "ACTIVE" | "SUSPENDED",
-          deletedAt: page.deletedAt,
-          createdAt: page.createdAt,
-          updatedAt: page.updatedAt,
-          isSystemPage: page.isSystemPage,
-          metaDescription: page.metaDescription,
-          metaKeywords: page.metaKeywords,
-          robotsIndex: page.robotsIndex,
-          userUid: page.userUid,
-        };
-      },
-    );
-
-    // 写入缓存文件
-    fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(result, null, 2), "utf-8");
-
-    rlog.log(`  Page cache generated: ${CACHE_FILE_PATH}`);
-    rlog.success(`✓ Cached ${Object.keys(result).length} pages`);
-
-    await prisma.$disconnect();
-
-    // 关闭连接池
-    if (pool) {
-      try {
-        await pool.end();
-        rlog.info("  Connection pool closed");
-      } catch (error) {
-        rlog.warning(
-          `  Error closing connection pool: ${error instanceof Error ? error.message : String(error)}`,
-        );
+      rlog.success(`✓ Cached ${Object.keys(result).length} pages`);
+    } finally {
+      if (shouldManagePrismaLifecycle) {
+        await closePrismaScriptRuntime(runtime);
       }
     }
   } catch (error) {

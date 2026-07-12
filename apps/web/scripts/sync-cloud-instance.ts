@@ -139,7 +139,7 @@ function scheduleTimeToMinuteOfDay(value: string | null): number | null {
   return hour * 60 + minute;
 }
 
-async function createPrismaClient(): Promise<ScriptRuntime | null> {
+async function createPrismaClient(): Promise<ScriptRuntime> {
   try {
     const PrismaClient = await loadPrismaClientConstructor();
     const { Pool } = await import("pg");
@@ -157,10 +157,9 @@ async function createPrismaClient(): Promise<ScriptRuntime | null> {
       pool: pool as ScriptPool,
     };
   } catch (error) {
-    rlog.warning(
-      ` Prisma initialization failed, skipping cloud sync: ${error instanceof Error ? error.message : String(error)}`,
+    throw new Error(
+      `Prisma initialization failed for cloud sync: ${error instanceof Error ? error.message : String(error)}`,
     );
-    return null;
   }
 }
 
@@ -372,15 +371,14 @@ async function syncToCloud(configValue: CloudSyncConfig): Promise<void> {
 
     const text = await response.text();
     if (!response.ok) {
-      rlog.warning(` Cloud sync failed (${response.status}): ${text}`);
-      return;
+      throw new Error(`HTTP ${response.status}: ${text}`);
     }
 
     rlog.success(" Instance synced to cloud successfully");
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Cloud sync request failed";
-    rlog.warning(` Cloud sync failed: ${message}`);
+    throw new Error(`Cloud sync failed: ${message}`);
   } finally {
     clearTimeout(timer);
   }
@@ -393,7 +391,6 @@ export async function syncCloudInstance(options?: {
   const runtime = externalPrisma
     ? { prisma: externalPrisma, pool: null }
     : await createPrismaClient();
-  if (!runtime) return;
 
   const { prisma, pool } = runtime;
   try {
@@ -401,8 +398,8 @@ export async function syncCloudInstance(options?: {
     if (!cloudConfig) return;
     await syncToCloud(cloudConfig);
   } catch (error) {
-    rlog.warning(
-      ` Prebuild cloud sync error (ignored): ${error instanceof Error ? error.message : String(error)}`,
+    throw new Error(
+      `Prebuild cloud sync error: ${error instanceof Error ? error.message : String(error)}`,
     );
   } finally {
     if (!externalPrisma) {

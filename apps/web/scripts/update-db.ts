@@ -100,7 +100,7 @@ async function initializePrismaClient() {
 async function isDatabaseEmpty(): Promise<boolean> {
   try {
     const tables = await prisma.$queryRaw`
-      SELECT tablename 
+      SELECT tablename::text AS tablename
       FROM pg_tables 
       WHERE schemaname = 'public'
     `;

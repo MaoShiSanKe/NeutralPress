@@ -104,4 +104,27 @@ export default [
       ],
     },
   },
+  // 测试文件放宽类型限制
+  {
+    files: [
+      "**/__tests__/**/*.ts",
+      "**/__tests__/**/*.tsx",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/consistent-type-imports": "off",
+    },
+  },
+  // use-event/use-function 测试中调用 store accessor 而非 React hook
+  {
+    files: [
+      "src/hooks/__tests__/use-event.test.ts",
+      "src/hooks/__tests__/use-function.test.ts",
+    ],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
 ];

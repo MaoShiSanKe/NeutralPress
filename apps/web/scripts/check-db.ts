@@ -164,7 +164,7 @@ async function checkDatabaseSchema() {
   try {
     // 先检查数据库中有哪些表
     const existingTables = await prisma.$queryRaw`
-      SELECT tablename 
+      SELECT tablename::text AS tablename
       FROM pg_tables 
       WHERE schemaname = 'public'
     `;
