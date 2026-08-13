@@ -55,6 +55,10 @@ function isReservedIpv6(ip: string): boolean {
   if (normalized.startsWith("fe80:")) return true; // link-local
   if (normalized.startsWith("ff")) return true; // 组播 ff00::/8
   if (normalized.startsWith("2001:db8:")) return true; // 文档用途 2001:db8::/32
+  // IPv6 过渡地址可封装 IPv4 地址，可能借此绕过内网地址校验。
+  if (normalized.startsWith("64:ff9b:")) return true; // NAT64 64:ff9b::/96
+  if (normalized.startsWith("2002:")) return true; // 6to4 2002::/16
+  if (/^2001:0{1,4}:/.test(normalized)) return true; // Teredo 2001:0000::/32
   if (normalized.startsWith("::ffff:")) {
     const mapped = normalized.replace(/^::ffff:/, "");
     if (net.isIP(mapped) === 4) {

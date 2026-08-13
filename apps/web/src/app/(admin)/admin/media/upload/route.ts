@@ -24,7 +24,7 @@ import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
 import {
-  assertPublicHttpUrl,
+  fetchPublicHttpUrlBuffer,
   readResponseBufferWithLimit,
 } from "@/lib/server/url-security";
 import { getOrCreateVirtualStorage } from "@/lib/server/virtual-storage";
@@ -767,11 +767,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ========================================================================
     if (externalUrl) {
       try {
-        const safeExternalResult = await assertPublicHttpUrl(
-          externalUrl.trim(),
-        );
-        const normalizedExternalUrl = safeExternalResult.url.toString();
-
         let transferStorageProvider: StorageProviderRecord | null = null;
         if (importMode === "transfer") {
           if (storageProviderId) {
@@ -833,28 +828,23 @@ export async function POST(request: NextRequest): Promise<Response> {
         const virtualStorage =
           importMode === "record" ? await getOrCreateVirtualStorage() : null;
 
-        // Fetch 外部图片
-        const controller = new AbortController();
-        const timeout = setTimeout(
-          () => controller.abort(),
-          EXTERNAL_FETCH_TIMEOUT_MS,
-        );
-        let imageResponse: Response;
-        try {
-          imageResponse = await fetch(normalizedExternalUrl, {
+        // 在每次请求前解析并固定公网 IP，防止 DNS 重绑定 SSRF。
+        const fetchedExternal = await fetchPublicHttpUrlBuffer(
+          externalUrl.trim(),
+          {
             method: "GET",
-            redirect: "manual",
-            signal: controller.signal,
+            timeoutMs: EXTERNAL_FETCH_TIMEOUT_MS,
+            maxBytes: maxExternalSize,
+            maxRedirects: 0,
             headers: {
               "User-Agent":
                 "Mozilla/5.0 (compatible; NeutralPress/1.0; +https://neutralpress.net/bot)",
             },
-          });
-        } finally {
-          clearTimeout(timeout);
-        }
+          },
+        );
+        const normalizedExternalUrl = fetchedExternal.finalUrl;
 
-        if (imageResponse.status >= 300 && imageResponse.status < 400) {
+        if (fetchedExternal.status >= 300 && fetchedExternal.status < 400) {
           return response.badRequest({
             message: "外部图片地址不允许重定向",
             error: {
@@ -864,19 +854,19 @@ export async function POST(request: NextRequest): Promise<Response> {
           }) as Response;
         }
 
-        if (!imageResponse.ok) {
+        if (fetchedExternal.status < 200 || fetchedExternal.status >= 300) {
           return response.badRequest({
-            message: `无法获取外部图片: HTTP ${imageResponse.status}`,
+            message: `无法获取外部图片: HTTP ${fetchedExternal.status}`,
             error: {
               code: "FETCH_FAILED",
-              message: `HTTP 状态码: ${imageResponse.status}`,
+              message: `HTTP 状态码: ${fetchedExternal.status}`,
             },
           }) as Response;
         }
 
         // 检查 Content-Type
         const contentTypeHeader =
-          imageResponse.headers.get("content-type") || "image/jpeg";
+          fetchedExternal.headers.get("content-type") || "image/jpeg";
         const contentType =
           contentTypeHeader.split(";")[0]?.trim() || "image/jpeg";
         if (!contentType.startsWith("image/")) {
@@ -889,11 +879,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           }) as Response;
         }
 
-        // 读取图片数据
-        const buffer = await readResponseBufferWithLimit(
-          imageResponse,
-          maxExternalSize,
-        );
+        const buffer = fetchedExternal.body;
 
         // 提取文件名
         const urlObj = new URL(normalizedExternalUrl);

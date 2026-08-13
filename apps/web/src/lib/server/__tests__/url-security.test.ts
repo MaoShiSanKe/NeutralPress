@@ -257,6 +257,18 @@ describe("assertPublicHttpUrl", () => {
         assertPublicHttpUrl("http://[::ffff:10.0.0.1]"),
       ).rejects.toThrow();
     });
+
+    it.each([
+      ["NAT64", "64:ff9b::a9fe:a9fe"],
+      ["6to4", "2002:a9fe:a9fe::"],
+      ["Teredo", "2001:0000:4136:e378::"],
+    ])("拒绝 %s IPv6 过渡地址", async (_name, address) => {
+      mockLookup.mockResolvedValue([{ address, family: 6 }]);
+
+      await expect(assertPublicHttpUrl(`http://[${address}]`)).rejects.toThrow(
+        "目标地址解析到内网或保留地址",
+      );
+    });
   });
 
   describe("DNS 解析校验", () => {

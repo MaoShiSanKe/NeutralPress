@@ -15,6 +15,7 @@ import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { parseImageId, verifySignature } from "@/lib/server/image-crypto";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
 import prisma from "@/lib/server/prisma";
+import { fetchPublicHttpUrlBuffer } from "@/lib/server/url-security";
 import {
   formatIpLocation,
   parseUserAgent,
@@ -194,65 +195,26 @@ async function proxyImageFromSource({
     });
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), PROXY_FETCH_TIMEOUT_MS);
-  let response: Response;
-  try {
-    response = await fetch(storageUrl, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": request.headers.get("user-agent") || "NeutralPress/1.0",
-      },
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  if (!response.ok) {
-    return createImageErrorResponse({
-      imageId,
-      statusText: "HTTP 502 Bad Gateway",
-      message: `获取图片失败，存储服务返回 ${response.status}。`,
-    });
-  }
-
-  const contentLengthHeader = response.headers.get("content-length");
-  if (contentLengthHeader) {
-    const declaredSize = Number(contentLengthHeader);
-    if (
-      !Number.isNaN(declaredSize) &&
-      declaredSize > PROXY_MAX_RESPONSE_BYTES
-    ) {
-      return createImageErrorResponse({
-        imageId,
-        statusText: "HTTP 502 Bad Gateway",
-        message: "图片文件大小超出限制。",
-      });
-    }
-  }
-
-  if (!response.body) {
-    return createImageErrorResponse({
-      imageId,
-      statusText: "HTTP 502 Bad Gateway",
-      message: "存储服务返回了空响应体。",
-    });
-  }
-
-  let totalBytes = 0;
-  const sizeLimitedStream = new TransformStream<Uint8Array, Uint8Array>({
-    transform(chunk, controller) {
-      totalBytes += chunk.byteLength;
-      if (totalBytes > PROXY_MAX_RESPONSE_BYTES) {
-        controller.error(new Error("文件大小超出限制"));
-        return;
-      }
-      controller.enqueue(chunk);
+  const fetched = await fetchPublicHttpUrlBuffer(storageUrl, {
+    method: "GET",
+    timeoutMs: PROXY_FETCH_TIMEOUT_MS,
+    maxBytes: PROXY_MAX_RESPONSE_BYTES,
+    maxRedirects: 3,
+    headers: {
+      "User-Agent": request.headers.get("user-agent") || "NeutralPress/1.0",
     },
   });
 
+  if (fetched.status < 200 || fetched.status >= 300) {
+    return createImageErrorResponse({
+      imageId,
+      statusText: "HTTP 502 Bad Gateway",
+      message: `获取图片失败，存储服务返回 ${fetched.status}。`,
+    });
+  }
+
   const contentType =
-    response.headers.get("content-type") ||
+    fetched.headers.get("content-type") ||
     mimeType ||
     "application/octet-stream";
 
@@ -261,11 +223,9 @@ async function proxyImageFromSource({
     "Cache-Control": "public, max-age=31536000, immutable",
     "X-Content-Type-Options": "nosniff",
   };
-  if (contentLengthHeader) {
-    headers["Content-Length"] = contentLengthHeader;
-  }
+  headers["Content-Length"] = fetched.body.byteLength.toString();
 
-  return new NextResponse(response.body.pipeThrough(sizeLimitedStream), {
+  return new NextResponse(new Uint8Array(fetched.body), {
     status: 200,
     headers,
   });
